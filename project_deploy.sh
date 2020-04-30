@@ -65,6 +65,9 @@ aws s3 cp load_metric.zip s3://${TURBINE_BUCKET}/${TURBINE_PREFIX}functions ${PR
 # Upload scripts used for airflow initialisation on EC2 machines
 aws s3 cp scripts/ s3://${TURBINE_BUCKET}/${TURBINE_PREFIX}scripts --recursive ${PROFILE_OPT}
 
+# upload vpc script
+aws s3 cp submodules/quickstart-aws-vpc/templates/aws-vpc.template s3://${TURBINE_BUCKET}/${TURBINE_PREFIX}submodules/quickstart-aws-vpc/templates/aws-vpc.template
+
 # Create deploy bucket if it doesn't already exist
 aws s3 mb s3://${DEPLOY_BUCKET} ${PROFILE_OPT} ${REGION_OPT}
 

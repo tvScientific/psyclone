@@ -5,7 +5,7 @@
 echo 'running'
 STAGE="TESTING"
 PROFILE="airflow-sandbox"
-REGION="us-west-2"
+REGION="us-east-1"
 REGION_OPT=" --region $REGION"
 
 
@@ -22,13 +22,12 @@ fi
 
 PROJECT="airflow"
 PROJECT_LONG="${PROJECT}-testing"
-PROJECT_LONG_UNDER="${PROJECT}_testing"
 STACK_NAME="${PROJECT_LONG}-${STAGE}"
 TEMPLATE_EXT="template"
 TEMPLATE_KEY="templates"
-ROOT_TEMPLATE="./${TEMPLATE_KEY}/${PROJECT_LONG_UNDER}_turbine_master.${TEMPLATE_EXT}"
-S3_PACKAGE_KEY='packages'
-STAGE_LWR=`echo "$STAGE" | tr '[:upper:]' '[:lower:]'`
+ROOT_TEMPLATE="./templates_packaged/turbine-master.${TEMPLATE_EXT}"
+S3_PACKAGE_KEY="packages"
+PACKAGED_TEMPLATES="templates_packaged"
 
 
 AWS_ACCOUNT_ID=$(aws sts get-caller-identity --output text --query 'Account' $PROFILE_OPT $REGION_OPT)
@@ -54,11 +53,12 @@ check_for_error() {
 
 echo ''
 echo "CREATING TEMPLATES..."
-#python3 dativa_turbine_master_template.py $PROJECT_LONG $PROJECT $STAGE_LWR $LAMBDA_CODE_BUCKET
 
 # Create Bucket for lambda code
 aws s3 mb s3://$LAMBDA_CODE_BUCKET $PROFILE_OPT $REGION_OPT
-aws s3 cp package.zip s3://$LAMBDA_CODE_BUCKET/ $PROFILE_OPT
+cp functions/load_metric.py load_metric.py
+zip load_metric functions/load_metric.py
+aws s3 cp load_metric.zip s3://$LAMBDA_CODE_BUCKET/ $PROFILE_OPT
 
 # Create deploy bucket if it doesn't already exist
 aws s3 mb s3://$DEPLOY_BUCKET $PROFILE_OPT $REGION_OPT
@@ -67,7 +67,9 @@ aws s3 mb s3://$DEPLOY_BUCKET $PROFILE_OPT $REGION_OPT
 for template in ./$TEMPLATE_KEY/*.$TEMPLATE_EXT; do
     echo ''
     echo "PACKAGING: $template"
-    aws cloudformation package --template-file $template --s3-bucket $DEPLOY_BUCKET --s3-prefix $S3_PACKAGE_KEY --output-template-file $template $PROFILE_OPT $REGION_OPT
+    package_template="${template/${TEMPLATE_KEY}/${PACKAGED_TEMPLATES}}"
+    echo ${package_template}
+    aws cloudformation package --template-file $template --s3-bucket $DEPLOY_BUCKET --s3-prefix $S3_PACKAGE_KEY --output-template-file $package_template $PROFILE_OPT $REGION_OPT
 done
 check_for_error $? "Failed to create package"
 

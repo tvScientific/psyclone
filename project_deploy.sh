@@ -1,0 +1,80 @@
+#!/bin/bash
+
+# (c) Dativa 2019, all rights reserved
+
+echo 'running'
+STAGE="TESTING"
+PROFILE="airflow-sandbox"
+REGION="us-west-2"
+REGION_OPT=" --region $REGION"
+
+
+if [[ ! -z $PROFILE ]]; then
+    # $PROFILE was given
+    PROFILE_OPT=" --profile $PROFILE"
+    echo ''
+    echo "Using: '$PROFILE_OPT'"
+    # Create credential envars
+    export AWS_ACCESS_KEY_ID=$(aws configure get aws_access_key_id $PROFILE_OPT)
+    export AWS_SECRET_ACCESS_KEY=$(aws configure get aws_secret_access_key $PROFILE_OPT)
+fi
+
+
+PROJECT="airflow"
+PROJECT_LONG="${PROJECT}-testing"
+PROJECT_LONG_UNDER="${PROJECT}_testing"
+STACK_NAME="${PROJECT_LONG}-${STAGE}"
+TEMPLATE_EXT="template"
+TEMPLATE_KEY="templates"
+ROOT_TEMPLATE="./${TEMPLATE_KEY}/${PROJECT_LONG_UNDER}_turbine_master.${TEMPLATE_EXT}"
+S3_PACKAGE_KEY='packages'
+STAGE_LWR=`echo "$STAGE" | tr '[:upper:]' '[:lower:]'`
+
+
+AWS_ACCOUNT_ID=$(aws sts get-caller-identity --output text --query 'Account' $PROFILE_OPT $REGION_OPT)
+DEPLOY_BUCKET="${PROJECT}-deploy-${AWS_ACCOUNT_ID}-${REGION}"
+LAMBDA_CODE_BUCKET="${PROJECT}-lambda-code-${AWS_ACCOUNT_ID}-${REGION}"
+
+
+export AWS_DEFAULT_REGION=$REGION
+aws configure set default.region $AWS_DEFAULT_REGION
+
+check_for_error() {
+
+    if [ "$1" -ne 0 ]; then
+        echo ''
+        echo "*********************"
+        echo "** ERROR"
+        echo "** $2"
+        echo "*********************"
+        echo ''
+        exit $1
+    fi
+}
+
+echo ''
+echo "CREATING TEMPLATES..."
+#python3 dativa_turbine_master_template.py $PROJECT_LONG $PROJECT $STAGE_LWR $LAMBDA_CODE_BUCKET
+
+# Create Bucket for lambda code
+aws s3 mb s3://$LAMBDA_CODE_BUCKET $PROFILE_OPT $REGION_OPT
+aws s3 cp package.zip s3://$LAMBDA_CODE_BUCKET/ $PROFILE_OPT
+
+# Create deploy bucket if it doesn't already exist
+aws s3 mb s3://$DEPLOY_BUCKET $PROFILE_OPT $REGION_OPT
+
+
+for template in ./$TEMPLATE_KEY/*.$TEMPLATE_EXT; do
+    echo ''
+    echo "PACKAGING: $template"
+    aws cloudformation package --template-file $template --s3-bucket $DEPLOY_BUCKET --s3-prefix $S3_PACKAGE_KEY --output-template-file $template $PROFILE_OPT $REGION_OPT
+done
+check_for_error $? "Failed to create package"
+
+# Deploy or update the AWS infrastructure
+echo ''
+echo "...CREATING/UPDATING CLOUDFORMATION STACKS..."
+aws cloudformation deploy --template-file $ROOT_TEMPLATE --s3-bucket $DEPLOY_BUCKET --s3-prefix $TEMPLATE_KEY --stack-name $STACK_NAME --capabilities CAPABILITY_NAMED_IAM $PROFILE_OPT $REGION_OPT
+check_for_error $? "Failed to deploy template"
+
+

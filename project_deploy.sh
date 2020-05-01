@@ -3,7 +3,7 @@
 # (c) Dativa 2019, all rights reserved
 
 echo 'running'
-STAGE="TESTING1"
+STAGE="TESTING"
 PROFILE="airflow-sandbox"
 REGION="us-east-1"
 REGION_OPT=" --region ${REGION}"
@@ -26,7 +26,7 @@ STACK_NAME="${PROJECT_LONG}-${STAGE}"
 TEMPLATE_EXT="template"
 TEMPLATE_KEY="templates"
 ROOT_TEMPLATE="./templates_packaged/turbine-master.${TEMPLATE_EXT}"
-S3_PACKAGE_KEY="packages"
+S3_PACKAGE_KEY="templates"
 PACKAGED_TEMPLATES="templates_packaged"
 
 

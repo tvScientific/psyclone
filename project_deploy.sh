@@ -3,7 +3,7 @@
 # (c) Dativa 2019, all rights reserved
 
 echo 'running'
-STAGE="TESTING"
+STAGE="TESTING1"
 PROFILE="airflow-sandbox"
 REGION="us-east-1"
 REGION_OPT=" --region ${REGION}"
@@ -61,7 +61,7 @@ echo "CREATING TEMPLATES..."
 aws s3 mb s3://${TURBINE_BUCKET} ${PROFILE_OPT} ${REGION_OPT}
 # Zip and upload the lambda code ready for deploment
 zip load_metric functions/load_metric.py
-aws s3 cp load_metric.zip s3://${TURBINE_BUCKET}/${TURBINE_PREFIX}functions/load_metric.zip ${PROFILE_OPT}
+aws s3 cp load_metric.zip s3://${TURBINE_BUCKET}/${TURBINE_PREFIX}functions/package.zip ${PROFILE_OPT}
 # Upload scripts used for airflow initialisation on EC2 machines
 aws s3 cp scripts/ s3://${TURBINE_BUCKET}/${TURBINE_PREFIX}scripts --recursive ${PROFILE_OPT} > /dev/null
 

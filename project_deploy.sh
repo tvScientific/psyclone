@@ -25,7 +25,7 @@ PROJECT_LONG="${PROJECT}-testing"
 STACK_NAME="${PROJECT_LONG}-${STAGE}"
 TEMPLATE_EXT="template"
 TEMPLATE_KEY="templates"
-ROOT_TEMPLATE="./templates_packaged/turbine-master.${TEMPLATE_EXT}"
+ROOT_TEMPLATE="./templates/turbine-master.${TEMPLATE_EXT}"
 S3_PACKAGE_KEY="templates"
 PACKAGED_TEMPLATES="templates_packaged"
 
@@ -63,27 +63,29 @@ aws s3 mb s3://${TURBINE_BUCKET} ${PROFILE_OPT} ${REGION_OPT}
 zip load_metric functions/load_metric.py
 aws s3 cp load_metric.zip s3://${TURBINE_BUCKET}/${TURBINE_PREFIX}functions/load_metric.zip ${PROFILE_OPT}
 # Upload scripts used for airflow initialisation on EC2 machines
-aws s3 cp scripts/ s3://${TURBINE_BUCKET}/${TURBINE_PREFIX}scripts --recursive ${PROFILE_OPT}
+aws s3 cp scripts/ s3://${TURBINE_BUCKET}/${TURBINE_PREFIX}scripts --recursive ${PROFILE_OPT} > /dev/null
 
 # upload vpc script
 aws s3 cp submodules/quickstart-aws-vpc/templates/aws-vpc.template s3://${TURBINE_BUCKET}/${TURBINE_PREFIX}submodules/quickstart-aws-vpc/templates/aws-vpc.template ${PROFILE_OPT}
 
 # Create deploy bucket if it doesn't already exist
 aws s3 mb s3://${DEPLOY_BUCKET} ${PROFILE_OPT} ${REGION_OPT}
+aws s3 cp ./${TEMPLATE_KEY}/ s3://${DEPLOY_BUCKET}/${S3_PACKAGE_KEY}/ --recursive ${PROFILE_OPT}
 
-
-for template in ./${TEMPLATE_KEY}/*.${TEMPLATE_EXT}; do
-    echo ''
-    echo "PACKAGING: ${template}"
-    package_template="${template/${TEMPLATE_KEY}/${PACKAGED_TEMPLATES}}"
-    echo ${package_template}
-    aws cloudformation package --template-file ${template} --s3-bucket ${DEPLOY_BUCKET} --s3-prefix ${S3_PACKAGE_KEY} --output-template-file ${package_template} ${PROFILE_OPT} ${REGION_OPT}
-done
+#for template in ./${TEMPLATE_KEY}/*.${TEMPLATE_EXT}; do
+#    echo ''
+#    echo "PACKAGING: ${template}"
+#    package_template="${template/${TEMPLATE_KEY}/${PACKAGED_TEMPLATES}}"
+#    echo ${package_template}
+#    echo  "aws cloudformation package --template-file ${template} --s3-bucket ${DEPLOY_BUCKET} --s3-prefix ${S3_PACKAGE_KEY} --output-template-file ${package_template} ${PROFILE_OPT} ${REGION_OPT}"
+##    aws cloudformation package --template-file ${template} --s3-bucket ${DEPLOY_BUCKET} --s3-prefix ${S3_PACKAGE_KEY} --output-template-file ${package_template} ${PROFILE_OPT} ${REGION_OPT}
+#done
 check_for_error $? "Failed to create package"
 
 # Deploy or update the AWS infrastructure
 echo ''
 echo "...CREATING/UPDATING CLOUDFORMATION STACKS..."
+echo "aws cloudformation deploy --template-file ${ROOT_TEMPLATE} --s3-bucket ${DEPLOY_BUCKET} --s3-prefix ${TEMPLATE_KEY} --stack-name ${STACK_NAME} --parameter-overrides ${PARAM_OVERRIDES} --capabilities CAPABILITY_NAMED_IAM ${PROFILE_OPT} ${REGION_OPT}"
 aws cloudformation deploy --template-file ${ROOT_TEMPLATE} --s3-bucket ${DEPLOY_BUCKET} --s3-prefix ${TEMPLATE_KEY} --stack-name ${STACK_NAME} --parameter-overrides ${PARAM_OVERRIDES} --capabilities CAPABILITY_NAMED_IAM ${PROFILE_OPT} ${REGION_OPT}
 check_for_error $? "Failed to deploy template"
 

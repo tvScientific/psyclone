@@ -2,28 +2,15 @@
 
 # (c) Dativa 2019, all rights reserved
 
-echo 'running'
-STAGE="TESTING"
-PROFILE="airflow-sandbox"
+STAGE="DEV"
+PROFILE="dev-inscape"
 REGION="us-east-1"
 REGION_OPT=" --region ${REGION}"
 
-
-AWS_ACCOUNT_ID=$(aws sts get-caller-identity --output text --query 'Account' ${PROFILE_OPT} ${REGION_OPT})
-DEPLOY_BUCKET="${PROJECT}-deploy-${AWS_ACCOUNT_ID}-${REGION}"
-
-TURBINE_BUCKET="${DEPLOY_BUCKET}"
-TURBINE_PREFIX=""
-
-LOAD_EXAMPLE_DAGS=True
-LOAD_DEFAULT_CONS=True
-
-PARAM_OVERRIDES="QSS3BucketName=${TURBINE_BUCKET} QSS3KeyPrefix=${TURBINE_PREFIX} LoadExampleDags=${LOADDEFAULTCONS} LoadDefaultCons=True MinGroupSize=1"
-
-
-PROJECT="airflow"
-PROJECT_LONG="${PROJECT}-testing"
+PROJECT="pixel-ingest"
+PROJECT_LONG="${PROJECT}-dev"
 STACK_NAME="${PROJECT_LONG}-${STAGE}"
+
 TEMPLATE_EXT="template"
 TEMPLATE_KEY="templates"
 ROOT_TEMPLATE="./templates/turbine-master.${TEMPLATE_EXT}"
@@ -40,6 +27,21 @@ if [[ ! -z ${PROFILE} ]]; then
     export AWS_ACCESS_KEY_ID=$(aws configure get aws_access_key_id ${PROFILE_OPT})
     export AWS_SECRET_ACCESS_KEY=$(aws configure get aws_secret_access_key ${PROFILE_OPT})
 fi
+
+AWS_ACCOUNT_ID=$(aws sts get-caller-identity --output text --query 'Account' ${PROFILE_OPT} ${REGION_OPT})
+
+DEPLOY_BUCKET="${PROJECT}-deploy-${AWS_ACCOUNT_ID}-${REGION}"
+
+TURBINE_BUCKET="${DEPLOY_BUCKET}"
+TURBINE_PREFIX=""
+
+LOAD_EXAMPLE_DAGS=True
+LOAD_DEFAULT_CONS=False
+
+PARAM_OVERRIDES="QSS3BucketName=${TURBINE_BUCKET} QSS3KeyPrefix=${TURBINE_PREFIX} LoadExampleDags=${LOADDEFAULTCONS} LoadDefaultCons=True MinGroupSize=1"
+
+
+
 
 export AWS_DEFAULT_REGION=${REGION}
 aws configure set default.region ${AWS_DEFAULT_REGION}

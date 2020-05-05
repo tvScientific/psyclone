@@ -97,3 +97,5 @@ cd_agent() {
     chmod +x ./install
     ./install auto
 }
+
+pip3 install dativatools

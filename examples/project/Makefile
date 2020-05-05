@@ -1,9 +1,9 @@
 ifndef stack-name
 $(error stack-name is not set)
 endif
-ifndef revision
-revision := $(shell date --utc +%Y%m%dT%H%M%SZ)
-endif
+# ifndef revision
+# revision := $(shell date --utc +%Y%m%dT%H%M%SZ)
+# endif
 
 profile-opt := --profile $(profile-name)
 region-opt := --region $(region-name)

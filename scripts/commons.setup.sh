@@ -98,7 +98,4 @@ cd_agent() {
     ./install auto
 }
 
-pip3 install dativatools==3.2.796
-pip3 install pandas==0.25.3
-pip3 install boto3
-
+pip3 install -r requirements.txt

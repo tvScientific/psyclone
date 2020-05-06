@@ -2,8 +2,8 @@
 
 # (c) Dativa 2019, all rights reserved
 
-STAGE=${1:-"DEV"}
-PROFILE=${2:-"inscape-dev"}
+STAGE=${1:-"TESTING"}
+PROFILE=${2:-""}
 REGION=${3:-"us-east-1"}
 PROJECT=${4:-"pixel-ingest"}
 

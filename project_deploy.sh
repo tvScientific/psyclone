@@ -2,12 +2,13 @@
 
 # (c) Dativa 2019, all rights reserved
 
-STAGE="DEV"
-PROFILE="dev-inscape"
-REGION="us-east-1"
+STAGE=${1:-"DEV"}
+PROFILE=${2:-"inscape-dev"}
+REGION=${3:-"us-east-1"}
+PROJECT=${4:-"pixel-ingest"}
+
 REGION_OPT=" --region ${REGION}"
 
-PROJECT="pixel-ingest"
 PROJECT_LONG="${PROJECT}-dev"
 STACK_NAME="${PROJECT_LONG}-${STAGE}"
 
@@ -38,7 +39,7 @@ TURBINE_PREFIX=""
 LOAD_EXAMPLE_DAGS=True
 LOAD_DEFAULT_CONS=False
 
-PARAM_OVERRIDES="QSS3BucketName=${TURBINE_BUCKET} QSS3KeyPrefix=${TURBINE_PREFIX} LoadExampleDags=${LOADDEFAULTCONS} LoadDefaultCons=True MinGroupSize=1"
+PARAM_OVERRIDES="QSS3BucketName=${TURBINE_BUCKET} QSS3KeyPrefix=${TURBINE_PREFIX} LoadExampleDags=${LOAD_EXAMPLE_DAGS} LoadDefaultCons=${LOAD_DEFAULT_CONS} MinGroupSize=1"
 
 
 

@@ -1,8 +1,9 @@
 from datetime import datetime
-
 from airflow import DAG
 from airflow.operators.bash_operator import BashOperator
+import os
 
+print(os.getcwd())
 default_args = {
     "start_date": datetime(2019, 1, 1),
 }

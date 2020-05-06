@@ -5,18 +5,21 @@
 STAGE=${1:-"TESTING"}
 PROFILE=${2:-""}
 REGION=${3:-"us-east-1"}
-PROJECT=${4:-"pixel-ingest"}
+PROJECT=${4:-"productisation"}
+LOAD_EXAMPLE_DAGS=${5:-False}
+LOAD_DEFAULT_CONS=${6:-False}
+
 
 REGION_OPT=" --region ${REGION}"
 
-PROJECT_LONG="${PROJECT}-dev"
+PROJECT_LONG="${PROJECT}-airflow"
 STACK_NAME="${PROJECT_LONG}-${STAGE}"
+
 
 TEMPLATE_EXT="template"
 TEMPLATE_KEY="templates"
 ROOT_TEMPLATE="./templates/turbine-master.${TEMPLATE_EXT}"
 S3_PACKAGE_KEY="templates"
-PACKAGED_TEMPLATES="templates_packaged"
 
 
 if [[ ! -z ${PROFILE} ]]; then
@@ -34,10 +37,10 @@ AWS_ACCOUNT_ID=$(aws sts get-caller-identity --output text --query 'Account' ${P
 DEPLOY_BUCKET="${PROJECT}-deploy-${AWS_ACCOUNT_ID}-${REGION}"
 
 TURBINE_BUCKET="${DEPLOY_BUCKET}"
-TURBINE_PREFIX=""
+TURBINE_PREFIX="${STAGE}/"
 
-LOAD_EXAMPLE_DAGS=True
-LOAD_DEFAULT_CONS=False
+
+
 
 PARAM_OVERRIDES="QSS3BucketName=${TURBINE_BUCKET} QSS3KeyPrefix=${TURBINE_PREFIX} LoadExampleDags=${LOAD_EXAMPLE_DAGS} LoadDefaultCons=${LOAD_DEFAULT_CONS} MinGroupSize=1"
 
@@ -78,15 +81,7 @@ aws s3 cp submodules/quickstart-aws-vpc/templates/aws-vpc.template s3://${TURBIN
 aws s3 mb s3://${DEPLOY_BUCKET} ${PROFILE_OPT} ${REGION_OPT}
 aws s3 cp ./${TEMPLATE_KEY}/ s3://${DEPLOY_BUCKET}/${S3_PACKAGE_KEY}/ --recursive ${PROFILE_OPT}
 
-#for template in ./${TEMPLATE_KEY}/*.${TEMPLATE_EXT}; do
-#    echo ''
-#    echo "PACKAGING: ${template}"
-#    package_template="${template/${TEMPLATE_KEY}/${PACKAGED_TEMPLATES}}"
-#    echo ${package_template}
-#    echo  "aws cloudformation package --template-file ${template} --s3-bucket ${DEPLOY_BUCKET} --s3-prefix ${S3_PACKAGE_KEY} --output-template-file ${package_template} ${PROFILE_OPT} ${REGION_OPT}"
-##    aws cloudformation package --template-file ${template} --s3-bucket ${DEPLOY_BUCKET} --s3-prefix ${S3_PACKAGE_KEY} --output-template-file ${package_template} ${PROFILE_OPT} ${REGION_OPT}
-#done
-check_for_error $? "Failed to create package"
+check_for_error $? "Failed to upload templates"
 
 # Deploy or update the AWS infrastructure
 echo ''

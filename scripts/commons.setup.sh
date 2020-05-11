@@ -98,4 +98,3 @@ cd_agent() {
     ./install auto
 }
 
-pip3 install -r requirements.txt

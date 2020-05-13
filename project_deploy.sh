@@ -2,10 +2,10 @@
 
 # (c) Dativa 2019, all rights reserved
 
-STAGE=${1:-"TESTING"}
+STAGE=${1:-"TEST"}
 PROFILE=${2:-"sandbox"}
 REGION=${3:-"us-east-1"}
-PROJECT=${4:-"productisation"}
+PROJECT=${4:-"default"}
 POLICIES_PATH=${5:-"policies"}
 LOAD_EXAMPLE_DAGS=${6:-False}
 LOAD_DEFAULT_CONS=${7:-False}
@@ -66,7 +66,7 @@ check_for_error() {
 echo ''
 echo "CREATING TEMPLATES..."
 
-python3 update_yaml_templates.py "${TEMPLATE_KEY}" "${POLICIES_PATH}" "${UPDATED_TEMPLATE_KEY}"
+python3 update_yaml_templates.py "${TEMPLATE_KEY}" "${POLICIES_PATH}" "${UPDATED_TEMPLATE_KEY}" "${STAGE}"
 
 # Create Bucket for lambda code and to store scripts for setting up airflow
 aws s3 mb s3://${TURBINE_BUCKET} ${PROFILE_OPT} ${REGION_OPT}

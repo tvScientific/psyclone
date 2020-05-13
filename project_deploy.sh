@@ -81,7 +81,7 @@ aws s3 cp submodules/quickstart-aws-vpc/templates/aws-vpc.template s3://${TURBIN
 
 # Create deploy bucket if it doesn't already exist
 aws s3 mb s3://${DEPLOY_BUCKET} ${PROFILE_OPT} ${REGION_OPT}
-aws s3 cp ./${UPDATED_TEMPLATE_KEY}/ s3://${DEPLOY_BUCKET}/${S3_PACKAGE_KEY}/ --recursive ${PROFILE_OPT}
+aws s3 cp ./${UPDATED_TEMPLATE_KEY}/ s3://${DEPLOY_BUCKET}/${TURBINE_PREFIX}${S3_PACKAGE_KEY}/ --recursive ${PROFILE_OPT}
 
 check_for_error $? "Failed to upload templates"
 
@@ -89,6 +89,6 @@ check_for_error $? "Failed to upload templates"
 echo ''
 echo "...CREATING/UPDATING CLOUDFORMATION STACKS..."
 echo "aws cloudformation deploy --template-file ${ROOT_TEMPLATE} --s3-bucket ${DEPLOY_BUCKET} --s3-prefix ${UPDATED_TEMPLATE_KEY} --stack-name ${STACK_NAME} --parameter-overrides ${PARAM_OVERRIDES} --capabilities CAPABILITY_NAMED_IAM ${PROFILE_OPT} ${REGION_OPT}"
-aws cloudformation deploy --template-file ${ROOT_TEMPLATE} --s3-bucket ${DEPLOY_BUCKET} --s3-prefix ${UPDATED_TEMPLATE_KEY} --stack-name ${STACK_NAME} --parameter-overrides ${PARAM_OVERRIDES} --capabilities CAPABILITY_NAMED_IAM ${PROFILE_OPT} ${REGION_OPT}
+aws cloudformation deploy --template-file ${ROOT_TEMPLATE} --s3-bucket ${DEPLOY_BUCKET} --s3-prefix ${TURBINE_PREFIX}${UPDATED_TEMPLATE_KEY} --stack-name ${STACK_NAME} --parameter-overrides ${PARAM_OVERRIDES} --capabilities CAPABILITY_NAMED_IAM ${PROFILE_OPT} ${REGION_OPT}
 check_for_error $? "Failed to deploy template"
 

@@ -3,14 +3,13 @@
 # (c) Dativa 2019, all rights reserved
 
 STAGE=${1:-"TESTING"}
-PROFILE=${2:-""}
+PROFILE=${2:-"sandbox"}
 REGION=${3:-"us-east-1"}
 PROJECT=${4:-"productisation"}
-LOAD_EXAMPLE_DAGS=${5:-False}
-LOAD_DEFAULT_CONS=${6:-False}
+POLICIES_PATH=${5:-"policies"}
+LOAD_EXAMPLE_DAGS=${6:-False}
+LOAD_DEFAULT_CONS=${7:-False}
 
-
-REGION_OPT=" --region ${REGION}"
 
 PROJECT_LONG="${PROJECT}-airflow"
 STACK_NAME="${PROJECT_LONG}-${STAGE}"
@@ -18,7 +17,8 @@ STACK_NAME="${PROJECT_LONG}-${STAGE}"
 
 TEMPLATE_EXT="template"
 TEMPLATE_KEY="templates"
-ROOT_TEMPLATE="./templates/turbine-master.${TEMPLATE_EXT}"
+UPDATED_TEMPLATE_KEY="templates_updated"
+ROOT_TEMPLATE="./${UPDATED_TEMPLATE_KEY}/turbine-master.${TEMPLATE_EXT}"
 S3_PACKAGE_KEY="templates"
 
 
@@ -66,6 +66,8 @@ check_for_error() {
 echo ''
 echo "CREATING TEMPLATES..."
 
+python3 update_yaml_templates.py "${TEMPLATE_KEY}" "${POLICIES_PATH}" "${UPDATED_TEMPLATE_KEY}"
+
 # Create Bucket for lambda code and to store scripts for setting up airflow
 aws s3 mb s3://${TURBINE_BUCKET} ${PROFILE_OPT} ${REGION_OPT}
 # Zip and upload the lambda code ready for deploment
@@ -79,15 +81,14 @@ aws s3 cp submodules/quickstart-aws-vpc/templates/aws-vpc.template s3://${TURBIN
 
 # Create deploy bucket if it doesn't already exist
 aws s3 mb s3://${DEPLOY_BUCKET} ${PROFILE_OPT} ${REGION_OPT}
-aws s3 cp ./${TEMPLATE_KEY}/ s3://${DEPLOY_BUCKET}/${S3_PACKAGE_KEY}/ --recursive ${PROFILE_OPT}
+aws s3 cp ./${UPDATED_TEMPLATE_KEY}/ s3://${DEPLOY_BUCKET}/${S3_PACKAGE_KEY}/ --recursive ${PROFILE_OPT}
 
 check_for_error $? "Failed to upload templates"
 
 # Deploy or update the AWS infrastructure
 echo ''
 echo "...CREATING/UPDATING CLOUDFORMATION STACKS..."
-echo "aws cloudformation deploy --template-file ${ROOT_TEMPLATE} --s3-bucket ${DEPLOY_BUCKET} --s3-prefix ${TEMPLATE_KEY} --stack-name ${STACK_NAME} --parameter-overrides ${PARAM_OVERRIDES} --capabilities CAPABILITY_NAMED_IAM ${PROFILE_OPT} ${REGION_OPT}"
-aws cloudformation deploy --template-file ${ROOT_TEMPLATE} --s3-bucket ${DEPLOY_BUCKET} --s3-prefix ${TEMPLATE_KEY} --stack-name ${STACK_NAME} --parameter-overrides ${PARAM_OVERRIDES} --capabilities CAPABILITY_NAMED_IAM ${PROFILE_OPT} ${REGION_OPT}
+echo "aws cloudformation deploy --template-file ${ROOT_TEMPLATE} --s3-bucket ${DEPLOY_BUCKET} --s3-prefix ${UPDATED_TEMPLATE_KEY} --stack-name ${STACK_NAME} --parameter-overrides ${PARAM_OVERRIDES} --capabilities CAPABILITY_NAMED_IAM ${PROFILE_OPT} ${REGION_OPT}"
+aws cloudformation deploy --template-file ${ROOT_TEMPLATE} --s3-bucket ${DEPLOY_BUCKET} --s3-prefix ${UPDATED_TEMPLATE_KEY} --stack-name ${STACK_NAME} --parameter-overrides ${PARAM_OVERRIDES} --capabilities CAPABILITY_NAMED_IAM ${PROFILE_OPT} ${REGION_OPT}
 check_for_error $? "Failed to deploy template"
-
 

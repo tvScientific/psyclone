@@ -1,0 +1,2 @@
+arn:aws:iam::aws:policy/AmazonAthenaFullAccess
+arn:aws:iam::aws:policy/AmazonS3ReadOnlyAccess

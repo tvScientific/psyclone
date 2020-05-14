@@ -2,20 +2,24 @@
 
 # (c) Dativa 2019, all rights reserved
 
-STAGE="DEV"
-PROFILE="dev-inscape"
-REGION="us-east-1"
-REGION_OPT=" --region ${REGION}"
+STAGE=${1:-"TEST"}
+PROFILE=${2:-""}
+REGION=${3:-"us-east-1"}
+PROJECT=${4:-"default"}
+POLICIES_PATH=${5:-"policies"}
+LOAD_EXAMPLE_DAGS=${6:-False}
+LOAD_DEFAULT_CONS=${7:-False}
 
-PROJECT="pixel-ingest"
-PROJECT_LONG="${PROJECT}-dev"
+
+PROJECT_LONG="${PROJECT}-psyclone"
 STACK_NAME="${PROJECT_LONG}-${STAGE}"
+
 
 TEMPLATE_EXT="template"
 TEMPLATE_KEY="templates"
-ROOT_TEMPLATE="./templates/turbine-master.${TEMPLATE_EXT}"
+UPDATED_TEMPLATE_KEY="templates_updated"
+ROOT_TEMPLATE="./${UPDATED_TEMPLATE_KEY}/turbine-master.${TEMPLATE_EXT}"
 S3_PACKAGE_KEY="templates"
-PACKAGED_TEMPLATES="templates_packaged"
 
 
 if [[ ! -z ${PROFILE} ]]; then
@@ -33,12 +37,12 @@ AWS_ACCOUNT_ID=$(aws sts get-caller-identity --output text --query 'Account' ${P
 DEPLOY_BUCKET="${PROJECT}-deploy-${AWS_ACCOUNT_ID}-${REGION}"
 
 TURBINE_BUCKET="${DEPLOY_BUCKET}"
-TURBINE_PREFIX=""
+TURBINE_PREFIX="${STAGE}/"
 
-LOAD_EXAMPLE_DAGS=True
-LOAD_DEFAULT_CONS=False
 
-PARAM_OVERRIDES="QSS3BucketName=${TURBINE_BUCKET} QSS3KeyPrefix=${TURBINE_PREFIX} LoadExampleDags=${LOADDEFAULTCONS} LoadDefaultCons=True MinGroupSize=1"
+
+
+PARAM_OVERRIDES="QSS3BucketName=${TURBINE_BUCKET} QSS3KeyPrefix=${TURBINE_PREFIX} LoadExampleDags=${LOAD_EXAMPLE_DAGS} LoadDefaultCons=${LOAD_DEFAULT_CONS} MinGroupSize=1"
 
 
 
@@ -62,6 +66,8 @@ check_for_error() {
 echo ''
 echo "CREATING TEMPLATES..."
 
+python3 update_yaml_templates.py "${TEMPLATE_KEY}" "${POLICIES_PATH}" "${UPDATED_TEMPLATE_KEY}" "${STAGE}"
+
 # Create Bucket for lambda code and to store scripts for setting up airflow
 aws s3 mb s3://${TURBINE_BUCKET} ${PROFILE_OPT} ${REGION_OPT}
 # Zip and upload the lambda code ready for deploment
@@ -75,23 +81,14 @@ aws s3 cp submodules/quickstart-aws-vpc/templates/aws-vpc.template s3://${TURBIN
 
 # Create deploy bucket if it doesn't already exist
 aws s3 mb s3://${DEPLOY_BUCKET} ${PROFILE_OPT} ${REGION_OPT}
-aws s3 cp ./${TEMPLATE_KEY}/ s3://${DEPLOY_BUCKET}/${S3_PACKAGE_KEY}/ --recursive ${PROFILE_OPT}
+aws s3 cp ./${UPDATED_TEMPLATE_KEY}/ s3://${DEPLOY_BUCKET}/${TURBINE_PREFIX}${S3_PACKAGE_KEY}/ --recursive ${PROFILE_OPT}
 
-#for template in ./${TEMPLATE_KEY}/*.${TEMPLATE_EXT}; do
-#    echo ''
-#    echo "PACKAGING: ${template}"
-#    package_template="${template/${TEMPLATE_KEY}/${PACKAGED_TEMPLATES}}"
-#    echo ${package_template}
-#    echo  "aws cloudformation package --template-file ${template} --s3-bucket ${DEPLOY_BUCKET} --s3-prefix ${S3_PACKAGE_KEY} --output-template-file ${package_template} ${PROFILE_OPT} ${REGION_OPT}"
-##    aws cloudformation package --template-file ${template} --s3-bucket ${DEPLOY_BUCKET} --s3-prefix ${S3_PACKAGE_KEY} --output-template-file ${package_template} ${PROFILE_OPT} ${REGION_OPT}
-#done
-check_for_error $? "Failed to create package"
+check_for_error $? "Failed to upload templates"
 
 # Deploy or update the AWS infrastructure
 echo ''
 echo "...CREATING/UPDATING CLOUDFORMATION STACKS..."
-echo "aws cloudformation deploy --template-file ${ROOT_TEMPLATE} --s3-bucket ${DEPLOY_BUCKET} --s3-prefix ${TEMPLATE_KEY} --stack-name ${STACK_NAME} --parameter-overrides ${PARAM_OVERRIDES} --capabilities CAPABILITY_NAMED_IAM ${PROFILE_OPT} ${REGION_OPT}"
-aws cloudformation deploy --template-file ${ROOT_TEMPLATE} --s3-bucket ${DEPLOY_BUCKET} --s3-prefix ${TEMPLATE_KEY} --stack-name ${STACK_NAME} --parameter-overrides ${PARAM_OVERRIDES} --capabilities CAPABILITY_NAMED_IAM ${PROFILE_OPT} ${REGION_OPT}
+echo "aws cloudformation deploy --template-file ${ROOT_TEMPLATE} --s3-bucket ${DEPLOY_BUCKET} --s3-prefix ${UPDATED_TEMPLATE_KEY} --stack-name ${STACK_NAME} --parameter-overrides ${PARAM_OVERRIDES} --capabilities CAPABILITY_NAMED_IAM ${PROFILE_OPT} ${REGION_OPT}"
+aws cloudformation deploy --template-file ${ROOT_TEMPLATE} --s3-bucket ${DEPLOY_BUCKET} --s3-prefix ${TURBINE_PREFIX}${UPDATED_TEMPLATE_KEY} --stack-name ${STACK_NAME} --parameter-overrides ${PARAM_OVERRIDES} --capabilities CAPABILITY_NAMED_IAM ${PROFILE_OPT} ${REGION_OPT}
 check_for_error $? "Failed to deploy template"
-
 

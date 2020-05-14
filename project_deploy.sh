@@ -3,7 +3,7 @@
 # (c) Dativa 2019, all rights reserved
 
 STAGE=${1:-"TEST"}
-PROFILE=${2:-"sandbox"}
+PROFILE=${2:-""}
 REGION=${3:-"us-east-1"}
 PROJECT=${4:-"default"}
 POLICIES_PATH=${5:-"policies"}

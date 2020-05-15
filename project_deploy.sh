@@ -43,7 +43,7 @@ LOAD_DEFAULT_CONS=False
 
 
 
-PARAM_OVERRIDES="QSS3BucketName=${TURBINE_BUCKET} QSS3KeyPrefix=${TURBINE_PREFIX} LoadExampleDags=${LOAD_EXAMPLE_DAGS} LoadDefaultCons=${LOAD_DEFAULT_CONS} MinGroupSize=1 WorkerInstanceType=t3.micro"
+PARAM_OVERRIDES="QSS3BucketName=${TURBINE_BUCKET} QSS3KeyPrefix=${TURBINE_PREFIX} LoadExampleDags=${LOAD_EXAMPLE_DAGS} LoadDefaultCons=${LOAD_DEFAULT_CONS} MinGroupSize=1"
 
 
 

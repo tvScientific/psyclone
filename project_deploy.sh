@@ -9,7 +9,7 @@ PROJECT=${4:-"default"}
 POLICIES_PATH=${5:-"policies"}
 
 
-
+PARAM_OVERRIDES
 PROJECT_LONG="${PROJECT}-psyclone"
 STACK_NAME="${PROJECT_LONG}-${STAGE}"
 

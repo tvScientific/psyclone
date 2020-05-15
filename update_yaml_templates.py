@@ -3,7 +3,6 @@ import os
 import sys
 import glob
 import logging
-
 from cfn_tools import load_yaml, dump_yaml
 
 logger = logging.getLogger(__name__)
@@ -35,7 +34,7 @@ def update_templates(templates_path, policies_base_path, updated_templates_path,
                         'Fn::Sub': '{policy_name}-{stage_name}-{nesting}'.format(policy_name=policy_name,
                                                                                  stage_name=stage_name,
                                                                                  nesting=template_name)},
-                                  'PolicyDocument': policy_loaded}
+                        'PolicyDocument': policy_loaded}
 
                     templates_dict[template_name]['Resources']['IamRole']['Properties']['Policies'].append(new_policy)
 
@@ -45,6 +44,7 @@ def update_templates(templates_path, policies_base_path, updated_templates_path,
         if managed_policies:
             with open(managed_policies[0]) as m_policies:
                 arn_list = m_policies.read().splitlines()
+                arn_list = [{'Fn::Sub': x} for x in arn_list]
                 templates_dict[template_name]['Resources']['IamRole']['Properties']['ManagedPolicyArns'] += arn_list
 
     for template_name in template_list:

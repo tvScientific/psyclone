@@ -7,8 +7,7 @@ PROFILE=${2:-""}
 REGION=${3:-"us-east-1"}
 PROJECT=${4:-"default"}
 POLICIES_PATH=${5:-"policies"}
-LOAD_EXAMPLE_DAGS=${6:-False}
-LOAD_DEFAULT_CONS=${7:-False}
+
 
 
 PROJECT_LONG="${PROJECT}-psyclone"
@@ -42,7 +41,7 @@ TURBINE_PREFIX="${STAGE}/"
 
 
 
-PARAM_OVERRIDES="QSS3BucketName=${TURBINE_BUCKET} QSS3KeyPrefix=${TURBINE_PREFIX} LoadExampleDags=${LOAD_EXAMPLE_DAGS} LoadDefaultCons=${LOAD_DEFAULT_CONS} MinGroupSize=1"
+PARAM_OVERRIDES="QSS3BucketName=${TURBINE_BUCKET} QSS3KeyPrefix=${TURBINE_PREFIX} LoadExampleDags=${LOAD_EXAMPLE_DAGS} LoadDefaultCons=${LOAD_DEFAULT_CONS} MinGroupSize=1 WorkerInstanceType=t3.micro"
 
 
 

@@ -64,7 +64,7 @@ python3 update_yaml_templates.py "${TEMPLATE_KEY}" "${POLICIES_PATH}" "${UPDATED
 # Create Bucket for lambda code and to store scripts for setting up airflow
 aws s3 mb s3://${TURBINE_BUCKET} ${PROFILE_OPT} ${REGION_OPT}
 # Zip and upload the lambda code ready for deploment
-zip load_metric functions/load_metric.py
+zip -j load_metric functions/load_metric.py
 aws s3 cp load_metric.zip s3://${TURBINE_BUCKET}/${TURBINE_PREFIX}functions/package.zip ${PROFILE_OPT}
 # Upload scripts used for airflow initialisation on EC2 machines
 aws s3 cp scripts/ s3://${TURBINE_BUCKET}/${TURBINE_PREFIX}scripts --recursive ${PROFILE_OPT} > /dev/null

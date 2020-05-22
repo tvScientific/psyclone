@@ -14,8 +14,8 @@ logger.setLevel(logging.INFO)
 
 
 class UpdateTemplates:
-    def __init__(self, templates_path, policies_base_path, updated_templates_path, additional_templates_path,
-                 stage_name):
+    def __init__(self, templates_path, policies_base_path, updated_templates_path, stage_name,
+                 additional_templates_path):
         self.templates_path = templates_path
         self.policies_base_path = policies_base_path
         self.updated_templates_path = updated_templates_path
@@ -24,6 +24,11 @@ class UpdateTemplates:
         self.template_list = ['master', 'cluster', 'scheduler', 'webserver', 'workerset']
         self.templates_dict = dict()
         self._load_templates()
+
+    @staticmethod
+    def to_pascal_case(filename):
+        split_name = filename.split('-')
+        return ''.join(map(str.title, split_name))
 
     def _load_templates(self):
         for template_name in self.template_list:
@@ -72,9 +77,26 @@ class UpdateTemplates:
             # Load yaml used for now but this can be changed if need be
             additional_template = load_yaml(template_file.read())
 
+        template_params = additional_template['Parameters']
+        # Use filename converted to PascalCase to set the name of the stack resource
+        template_file_name = self.additional_templates_path.rsplit('.')[0].rsplit('/')[-1]
+        sub_stack_name = self.to_pascal_case(template_file_name)
+
+        template_path_s3 = self.additional_templates_path.rsplit('/')[-1]
+        template_url = {'Fn::Join': ['', [{'Fn::Sub': 'https://${QSS3BucketName}.s3.amazonaws.com/'},
+                                          {'Ref': 'QSS3KeyPrefix'}, template_path_s3]]}
+
+        self.templates_dict['master']['Parameters'] = {**self.templates_dict['master']['Parameters'],
+                                                       **template_params}
+        resource_add = {sub_stack_name: {'Type': 'AWS::CloudFormation::Stack',
+                                         'Properties': {'TemplateURL': template_url, 'Parameters': template_params}}}
+
+        self.templates_dict['master']['Resources'].update(resource_add)
+
     def update_templates(self):
         self._load_templates()
         self.add_policies()
+        self._add_templates()
         self._save_templates()
 
 
@@ -84,7 +106,7 @@ if __name__ == "__main__":
     Get command line arguments
     """
 
-    EXPECTED_ARG_COUNT = 5
+    EXPECTED_ARG_COUNT = 6
     if len(sys.argv) != EXPECTED_ARG_COUNT:
 
         logger.error(
@@ -102,5 +124,8 @@ if __name__ == "__main__":
     POLICIES_BASE_PATH = str(sys.argv[2])
     UPDATED_TEMPLATES_PATH = str(sys.argv[3])
     STAGE_NAME = str(sys.argv[4])
-    update_templates = UpdateTemplates(TEMPLATES_PATH, POLICIES_BASE_PATH, UPDATED_TEMPLATES_PATH, STAGE_NAME)
+    ADDITIONAL_TEMPLATES_PATH = str(sys.argv[5])
+
+    update_templates = UpdateTemplates(TEMPLATES_PATH, POLICIES_BASE_PATH, UPDATED_TEMPLATES_PATH, STAGE_NAME,
+                                       ADDITIONAL_TEMPLATES_PATH)
     update_templates.update_templates()

@@ -13,44 +13,69 @@ logger.addHandler(stdout)
 logger.setLevel(logging.INFO)
 
 
-def update_templates(templates_path, policies_base_path, updated_templates_path, stage_name):
-    template_list = ['master', 'cluster', 'scheduler', 'webserver', 'workerset']
-    templates_dict = {}
+class UpdateTemplates:
+    def __init__(self, templates_path, policies_base_path, updated_templates_path, additional_templates_path,
+                 stage_name):
+        self.templates_path = templates_path
+        self.policies_base_path = policies_base_path
+        self.updated_templates_path = updated_templates_path
+        self.additional_templates_path = additional_templates_path
+        self.stage_name = stage_name
+        self.template_list = ['master', 'cluster', 'scheduler', 'webserver', 'workerset']
+        self.templates_dict = dict()
+        self._load_templates()
 
-    for template_name in template_list:
-        with open(os.path.join(templates_path,
-                               "turbine-{}.template".format(template_name))) as infile:
+    def _load_templates(self):
+        for template_name in self.template_list:
+            with open(os.path.join(self.templates_path,
+                                   "turbine-{}.template".format(template_name))) as infile:
+                self.templates_dict[template_name] = load_yaml(infile)
 
-            templates_dict[template_name] = load_yaml(infile)
+    def _save_templates(self):
+        for template_name in self.templates_dict.keys():
+            with open(os.path.join(self.updated_templates_path,
+                                   "turbine-{}.template".format(template_name)), 'w') as outfile:
+                outfile.write(dump_yaml(self.templates_dict[template_name]))
 
-        policies_list = glob.glob(os.path.join(policies_base_path, template_name, '*.json'))
+    def add_policies(self):
 
-        if policies_list:
-            for policy_path in policies_list:
-                with open(policy_path) as policy:
-                    policy_loaded = json.load(policy)
-                    policy_name = policy_path.rsplit('/')[-1].split('.')[0]
-                    new_policy = {'PolicyName': {
-                        'Fn::Sub': '{policy_name}-{stage_name}-{nesting}'.format(policy_name=policy_name,
-                                                                                 stage_name=stage_name,
-                                                                                 nesting=template_name)},
-                        'PolicyDocument': policy_loaded}
+        for template_name in self.templates_dict.keys():
+            policies_list = glob.glob(os.path.join(self.policies_base_path, template_name, '*.json'))
 
-                    templates_dict[template_name]['Resources']['IamRole']['Properties']['Policies'].append(new_policy)
+            if policies_list:
+                for policy_path in policies_list:
+                    with open(policy_path) as policy:
+                        policy_loaded = json.load(policy)
+                        policy_name = policy_path.rsplit('/')[-1].split('.')[0]
+                        new_policy = {'PolicyName': {
+                            'Fn::Sub': '{policy_name}-{stage_name}-{nesting}'.format(policy_name=policy_name,
+                                                                                     stage_name=self.stage_name,
+                                                                                     nesting=template_name)},
+                            'PolicyDocument': policy_loaded}
 
-        managed_policies = glob.glob(os.path.join(
-            policies_base_path, template_name, 'managed_policies.txt'
-        ))
-        if managed_policies:
-            with open(managed_policies[0]) as m_policies:
-                arn_list = m_policies.read().splitlines()
-                arn_list = [{'Fn::Sub': x} for x in arn_list]
-                templates_dict[template_name]['Resources']['IamRole']['Properties']['ManagedPolicyArns'] += arn_list
+                        self.templates_dict[template_name]['Resources']['IamRole']['Properties']['Policies'].append(
+                            new_policy)
 
-    for template_name in template_list:
-        with open(os.path.join(updated_templates_path,
-                               "turbine-{}.template".format(template_name)), 'w') as outfile:
-            outfile.write(dump_yaml(templates_dict[template_name]))
+            managed_policies = glob.glob(os.path.join(
+                self.policies_base_path, template_name, 'managed_policies.txt'
+            ))
+            if managed_policies:
+                with open(managed_policies[0]) as m_policies:
+                    arn_list = m_policies.read().splitlines()
+                    arn_list = [{'Fn::Sub': x} for x in arn_list]
+                    self.templates_dict[template_name]['Resources']['IamRole']['Properties'][
+                        'ManagedPolicyArns'] += arn_list
+
+    def _add_templates(self):
+
+        with open(self.additional_templates_path) as template_file:
+            # Load yaml used for now but this can be changed if need be
+            additional_template = load_yaml(template_file.read())
+
+    def update_templates(self):
+        self._load_templates()
+        self.add_policies()
+        self._save_templates()
 
 
 if __name__ == "__main__":
@@ -77,5 +102,5 @@ if __name__ == "__main__":
     POLICIES_BASE_PATH = str(sys.argv[2])
     UPDATED_TEMPLATES_PATH = str(sys.argv[3])
     STAGE_NAME = str(sys.argv[4])
-
-    update_templates(TEMPLATES_PATH, POLICIES_BASE_PATH, UPDATED_TEMPLATES_PATH, STAGE_NAME)
+    update_templates = UpdateTemplates(TEMPLATES_PATH, POLICIES_BASE_PATH, UPDATED_TEMPLATES_PATH, STAGE_NAME)
+    update_templates.update_templates()

@@ -82,6 +82,12 @@ class UpdateTemplates:
         template_file_name = self.additional_templates_path.rsplit('.')[0].rsplit('/')[-1]
         sub_stack_name = self.to_pascal_case(template_file_name)
 
+        add_keys_list = additional_template['Parameters'].keys()
+        existing_keys_lists = self.templates_dict['master']['Parameters'].keys()
+
+        if any((True for new_key in existing_keys_lists if new_key in add_keys_list)):
+            raise KeyError('There is an overlap in parameters between the additional template and the master template')
+
         template_path_s3 = self.additional_templates_path.rsplit('/')[-1]
         template_url = {'Fn::Join': ['', [{'Fn::Sub': 'https://${QSS3BucketName}.s3.amazonaws.com/'},
                                           {'Ref': 'QSS3KeyPrefix'}, template_path_s3]]}

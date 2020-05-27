@@ -78,6 +78,8 @@ class UpdateTemplates:
             additional_template = load_yaml(template_file.read())
 
         template_params = additional_template['Parameters']
+        resource_params = {'Ref': param for param in additional_template['Parameters'].keys()}
+
         # Use filename converted to PascalCase to set the name of the stack resource
         template_file_name = self.additional_templates_path.rsplit('.')[0].rsplit('/')[-1]
         sub_stack_name = self.to_pascal_case(template_file_name)
@@ -95,9 +97,12 @@ class UpdateTemplates:
         self.templates_dict['master']['Parameters'] = {**self.templates_dict['master']['Parameters'],
                                                        **template_params}
         resource_add = {sub_stack_name: {'Type': 'AWS::CloudFormation::Stack',
-                                         'Properties': {'TemplateURL': template_url, 'Parameters': template_params}}}
+                                         'Properties': {'TemplateURL': template_url, 'Parameters': resource_params}}}
 
         self.templates_dict['master']['Resources'].update(resource_add)
+
+    def update_outputs(self):
+        pass
 
     def update_templates(self):
         self._load_templates()

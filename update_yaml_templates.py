@@ -77,27 +77,37 @@ class UpdateTemplates:
             # Load yaml used for now but this can be changed if need be
             additional_template = load_yaml(template_file.read())
 
-        template_params = additional_template['Parameters']
-        resource_params = {'Ref': param for param in additional_template['Parameters'].keys()}
+        if 'Parameters' in additional_template.keys():
+            template_params = additional_template['Parameters']
+            add_keys_list = additional_template['Parameters'].keys()
+            resource_params = {'Ref': param for param in additional_template['Parameters'].keys()}
+        else:
+            template_params = {}
+            add_keys_list = []
+            resource_params = None
 
-        # Use filename converted to PascalCase to set the name of the stack resource
-        template_file_name = self.additional_templates_path.rsplit('.')[0].rsplit('/')[-1]
-        sub_stack_name = self.to_pascal_case(template_file_name)
-
-        add_keys_list = additional_template['Parameters'].keys()
         existing_keys_lists = self.templates_dict['master']['Parameters'].keys()
 
         if any((True for new_key in existing_keys_lists if new_key in add_keys_list)):
             raise KeyError('There is an overlap in parameters between the additional template and the master template')
 
-        template_path_s3 = 'additional_templates/' + template_file_name
+        # Use filename converted to PascalCase to set the name of the stack resource
+        template_file_name = self.additional_templates_path.rsplit('.')[0].rsplit('/')[-1]
+        sub_stack_name = self.to_pascal_case(template_file_name)
+
+        template_path_s3 = 'templates/additional_templates/' + self.additional_templates_path.rsplit('/')[-1]
         template_url = {'Fn::Join': ['', [{'Fn::Sub': 'https://${QSS3BucketName}.s3.amazonaws.com/'},
                                           {'Ref': 'QSS3KeyPrefix'}, template_path_s3]]}
 
         self.templates_dict['master']['Parameters'] = {**self.templates_dict['master']['Parameters'],
                                                        **template_params}
-        resource_add = {sub_stack_name: {'Type': 'AWS::CloudFormation::Stack',
-                                         'Properties': {'TemplateURL': template_url, 'Parameters': resource_params}}}
+        if resource_params:
+            resource_add = {sub_stack_name: {'Type': 'AWS::CloudFormation::Stack',
+                                             'Properties': {'TemplateURL': template_url,
+                                                            'Parameters': resource_params}}}
+        else:
+            resource_add = {sub_stack_name: {'Type': 'AWS::CloudFormation::Stack',
+                                             'Properties': {'TemplateURL': template_url}}}
 
         self.templates_dict['master']['Resources'].update(resource_add)
 

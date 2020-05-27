@@ -88,7 +88,7 @@ class UpdateTemplates:
         if any((True for new_key in existing_keys_lists if new_key in add_keys_list)):
             raise KeyError('There is an overlap in parameters between the additional template and the master template')
 
-        template_path_s3 = self.additional_templates_path.rsplit('/')[-1]
+        template_path_s3 = 'additional_templates/' + template_file_name
         template_url = {'Fn::Join': ['', [{'Fn::Sub': 'https://${QSS3BucketName}.s3.amazonaws.com/'},
                                           {'Ref': 'QSS3KeyPrefix'}, template_path_s3]]}
 
@@ -102,7 +102,8 @@ class UpdateTemplates:
     def update_templates(self):
         self._load_templates()
         self.add_policies()
-        self._add_templates()
+        if self.additional_templates_path:
+            self._add_templates()
         self._save_templates()
 
 
@@ -111,6 +112,7 @@ if __name__ == "__main__":
     """
     Get command line arguments
     """
+    blank_acceptable = [4, 5]
 
     EXPECTED_ARG_COUNT = 6
     if len(sys.argv) != EXPECTED_ARG_COUNT:
@@ -123,13 +125,13 @@ if __name__ == "__main__":
                 len(sys.argv), EXPECTED_ARG_COUNT) + str(sys.argv))
     else:
         for argnum, arg in enumerate(sys.argv):
-            if not arg:
+            if not arg and argnum not in blank_acceptable:
                 raise ValueError("Blank value found for {}".format(argnum))
 
     TEMPLATES_PATH = str(sys.argv[1])
-    POLICIES_BASE_PATH = str(sys.argv[2])
-    UPDATED_TEMPLATES_PATH = str(sys.argv[3])
-    STAGE_NAME = str(sys.argv[4])
+    UPDATED_TEMPLATES_PATH = str(sys.argv[2])
+    STAGE_NAME = str(sys.argv[3])
+    POLICIES_BASE_PATH = str(sys.argv[4])
     ADDITIONAL_TEMPLATES_PATH = str(sys.argv[5])
 
     update_templates = UpdateTemplates(TEMPLATES_PATH, POLICIES_BASE_PATH, UPDATED_TEMPLATES_PATH, STAGE_NAME,

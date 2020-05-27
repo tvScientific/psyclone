@@ -6,7 +6,8 @@ STAGE=${1:-"TEST"}
 PROFILE=${2:-""}
 REGION=${3:-"us-east-1"}
 PROJECT=${4:-"default"}
-POLICIES_PATH=${5:-"policies"}
+POLICIES_PATH=${5:-""}
+ADDITIONAL_TEMPLATES_PATH=${6:-""}
 
 
 PROJECT_LONG="${PROJECT}-psyclone"
@@ -59,7 +60,16 @@ check_for_error() {
 echo ''
 echo "CREATING TEMPLATES..."
 
-python3 update_yaml_templates.py "${TEMPLATE_KEY}" "${POLICIES_PATH}" "${UPDATED_TEMPLATE_KEY}" "${STAGE}"
+python3 update_yaml_templates.py "${TEMPLATE_KEY}" "${UPDATED_TEMPLATE_KEY}" "${STAGE}" "${POLICIES_PATH}" "${ADDITIONAL_TEMPLATES_PATH}"
+echo "templates_updated"
+# If there is an additional template copy into templates_updated folder so it is deployed with the rest of the templates
+if [[ ! -z "${ADDITIONAL_TEMPLATES_PATH}" ]]; then
+    rm -rf "templates_updated/additional_templates"
+    mkdir "templates_updated/additional_templates"
+    cp "${ADDITIONAL_TEMPLATES_PATH}" "templates_updated/additional_template/"
+fi
+
+
 
 # Create Bucket for lambda code and to store scripts for setting up airflow
 aws s3 mb s3://${TURBINE_BUCKET} ${PROFILE_OPT} ${REGION_OPT}

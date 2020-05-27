@@ -1,0 +1,28 @@
+AWSTemplateFormatVersion: 2010-09-09
+Parameters:
+  TestParam:
+    Description: >-
+      CIDR block for the VPC.
+    ConstraintDescription: CIDR block parameter must be in the form x.x.x.x/16-28.
+    AllowedPattern: ^(([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])\.){3}([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])(\/([0-9]|[1-2][0-9]|3[0-2]))$
+    Default: 10.0.0.0/16
+    Type: String
+
+Resources:
+
+  TestCluster:
+    Type: AWS::CloudFormation::Stack
+    Properties:
+      TemplateURL: !Join
+        - ''
+        - - !Sub https://${QSS3BucketName}.s3.amazonaws.com/
+          - !Ref QSS3KeyPrefix
+          - templates/additional_templates/turbine-cluster.template
+      Parameters:
+        MoreTestParam: !Ref TestParam
+
+
+Outputs:
+  TestOut:
+    Value: !GetAtt TestCluster.Outputs.DeploymentsBucket
+

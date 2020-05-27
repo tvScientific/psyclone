@@ -1,3 +1,38 @@
+# Dativa
+This is a work in progress, both the code and readme are being updated and actively developed so somethings may not be in the neatest format for the time being.
+
+## Deployment
+
+As part of the dativa deployment a number of things have been added to utilise these additions the project deployment script can be called.
+
+### Usefull additions
+1. Add additional policies
+2. Deploy additional templates under the master level template
+
+### Deployment instructions
+The deployment script takes as input the location of any additional policies and additional template. 
+
+When specifying policies it should be done in the same format as what's in the policies folder in this project (included as an example) 
+and the bash should provide an absolute path to the policies directory.
+
+When specifying an additional template the full path to the top level template should be passed in, any further templates should be deployed from this
+as nested and uploaded as part of the project level deployment.
+
+
+### List of params that can be overridden
+SchedulerInstanceType
+WebserverInstanceType
+WorkerInstanceType
+MinGroupSize
+MaxGroupSize
+ShrinkThreshold
+GrowthThreshold
+LoadExampleDags
+LoadDefaultCons
+WebServerPort
+
+### Below this is the original turbine readme, left as is unedited
+
 <img src=".github/img/logo.png" align="right" width="25%" />
 
 # Turbine [![GitHub Release](https://img.shields.io/github/release/villasv/aws-airflow-stack.svg?style=flat-square&logo=github)](https://github.com/villasv/aws-airflow-stack/releases/latest) [![Build Status](https://img.shields.io/github/workflow/status/villasv/aws-airflow-stack/Stack%20Release%20Pipeline?style=flat-square&logo=github&logoColor=white&label=build)](https://github.com/villasv/aws-airflow-stack/actions?query=workflow%3A%22Stack+Release+Pipeline%22+branch%3Amaster) [![CFN Deploy](https://img.shields.io/badge/CFN-deploy-green.svg?style=flat-square&logo=amazon-aws)](#get-it-working)

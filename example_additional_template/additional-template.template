@@ -1,0 +1,35 @@
+Description: Contains security groups and Lambda function to allow access to CloudFront
+  Distributions
+Outputs:
+  SecurityGroupIDs:
+    Value: !Join
+      - ','
+      - - !Ref 'DEVSecurityGroupCFD0'
+        - !Ref 'DEVSecurityGroupCFD1'
+        - !Ref 'DEVSecurityGroupCFD2'
+        - !Ref 'DEVSecurityGroupCFD3'
+Resources:
+  DEVSecurityGroupCFD0:
+    Properties:
+      GroupDescription: A security group to hold IP addresses which allow access to
+        CloudFront
+      GroupName: DEVSecurityGroupCFD0
+    Type: AWS::EC2::SecurityGroup
+  DEVSecurityGroupCFD1:
+    Properties:
+      GroupDescription: A security group to hold IP addresses which allow access to
+        CloudFront
+      GroupName: DEVSecurityGroupCFD1
+    Type: AWS::EC2::SecurityGroup
+  DEVSecurityGroupCFD2:
+    Properties:
+      GroupDescription: A security group to hold IP addresses which allow access to
+        CloudFront
+      GroupName: DEVSecurityGroupCFD2
+    Type: AWS::EC2::SecurityGroup
+  DEVSecurityGroupCFD3:
+    Properties:
+      GroupDescription: A security group to hold IP addresses which allow access to
+        CloudFront
+      GroupName: DEVSecurityGroupCFD3
+    Type: AWS::EC2::SecurityGroup

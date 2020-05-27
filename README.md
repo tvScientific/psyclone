@@ -18,6 +18,9 @@ and the bash should provide an absolute path to the policies directory.
 When specifying an additional template the full path to the top level template should be passed in, any further templates should be deployed from this
 as nested and uploaded as part of the project level deployment.
 
+The deployment script will copy all files in the directory of the additional template into templates_updated/additional_templates however it will be uploaded to the 
+deployment s3 under templates/additional_templates, any nested templates should be aware of this and look to point to the QSS3Bucket/QSS3Prefix/templates/additional_templates.
+
 
 ### List of params that can be overridden
 SchedulerInstanceType

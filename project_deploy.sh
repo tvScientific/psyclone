@@ -66,10 +66,8 @@ echo "templates_updated"
 if [[ ! -z "${ADDITIONAL_TEMPLATE_PATH}" ]]; then
     rm -rf "templates_updated/additional_templates"
     mkdir "templates_updated/additional_templates"
-    cp "${ADDITIONAL_TEMPLATE_PATH}" "templates_updated/additional_templates/"
+    cp -r "$(dirname "${ADDITIONAL_TEMPLATE_PATH}")/" "templates_updated/additional_templates/"
 fi
-
-#echo "${ADDITIONAL_TEMPLATE_PATH}"
 
 
 # Create Bucket for lambda code and to store scripts for setting up airflow

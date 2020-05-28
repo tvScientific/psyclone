@@ -9,17 +9,14 @@ PROJECT=${4:-"default"}
 POLICIES_PATH=${5:-""}
 ADDITIONAL_TEMPLATE_PATH=${6:-""}
 
-
 PROJECT_LONG="${PROJECT}-psyclone"
 STACK_NAME="${PROJECT_LONG}-${STAGE}"
-
 
 TEMPLATE_EXT="template"
 TEMPLATE_KEY="templates"
 UPDATED_TEMPLATE_KEY="templates_updated"
 ROOT_TEMPLATE="./${UPDATED_TEMPLATE_KEY}/turbine-master.${TEMPLATE_EXT}"
 S3_PACKAGE_KEY="templates"
-
 
 if [[ ! -z ${PROFILE} ]]; then
     # ${PROFILE} was given
@@ -39,7 +36,6 @@ TURBINE_BUCKET="${DEPLOY_BUCKET}"
 TURBINE_PREFIX="${STAGE}/"
 
 PARAM_OVERRIDES="${PARAM_OVERRIDES} QSS3BucketName=${TURBINE_BUCKET} QSS3KeyPrefix=${TURBINE_PREFIX}"
-
 
 export AWS_DEFAULT_REGION=${REGION}
 aws configure set default.region ${AWS_DEFAULT_REGION}
@@ -64,11 +60,18 @@ python3 update_yaml_templates.py "${TEMPLATE_KEY}" "${UPDATED_TEMPLATE_KEY}" "${
 echo "templates_updated"
 # If there is an additional template copy into templates_updated folder so it is deployed with the rest of the templates
 if [[ ! -z "${ADDITIONAL_TEMPLATE_PATH}" ]]; then
-    rm -rf "templates_updated/additional_templates"
-    mkdir "templates_updated/additional_templates"
-    cp -r "$(dirname "${ADDITIONAL_TEMPLATE_PATH}")/" "templates_updated/additional_templates/"
+    TEMPLATE_NAME=$(basename ${ADDITIONAL_TEMPLATE_PATH})
+    PACKAGED_TEMPLATE_DIR="templates_updated/additional_templates"
+    rm -rf "${PACKAGED_TEMPLATE_DIR}"
+    mkdir "${PACKAGED_TEMPLATE_DIR}"
+    # for TEMPLATE_PATH in $(ls "${ADDITIONAL_TEMPLATE_PATH}*.template")
+    # do
+    # TEMPLATE_NAME=$(basename ${ADDITIONAL_TEMPLATE_PATH})
+    # echo "run packaging on "$i
+    # aws cloudformation blah
+    # done
+    aws cloudformation package --template-file ${ADDITIONAL_TEMPLATE_PATH} --s3-bucket ${DEPLOY_BUCKET} --s3-prefix ${S3_PACKAGE_KEY} --output-template-file ${PACKAGED_TEMPLATE_DIR}/${TEMPLATE_NAME} ${PROFILE_OPT} ${REGION_OPT}
 fi
-
 
 # Create Bucket for lambda code and to store scripts for setting up airflow
 aws s3 mb s3://${TURBINE_BUCKET} ${PROFILE_OPT} ${REGION_OPT}
@@ -76,7 +79,7 @@ aws s3 mb s3://${TURBINE_BUCKET} ${PROFILE_OPT} ${REGION_OPT}
 zip -j load_metric functions/load_metric.py
 aws s3 cp load_metric.zip s3://${TURBINE_BUCKET}/${TURBINE_PREFIX}functions/package.zip ${PROFILE_OPT}
 # Upload scripts used for airflow initialisation on EC2 machines
-aws s3 cp scripts/ s3://${TURBINE_BUCKET}/${TURBINE_PREFIX}scripts --recursive ${PROFILE_OPT} > /dev/null
+aws s3 cp scripts/ s3://${TURBINE_BUCKET}/${TURBINE_PREFIX}scripts --recursive ${PROFILE_OPT} >/dev/null
 
 # upload vpc script
 aws s3 cp submodules/quickstart-aws-vpc/templates/aws-vpc.template s3://${TURBINE_BUCKET}/${TURBINE_PREFIX}submodules/quickstart-aws-vpc/templates/aws-vpc.template ${PROFILE_OPT}
@@ -93,4 +96,3 @@ echo "...CREATING/UPDATING CLOUDFORMATION STACKS..."
 echo "aws cloudformation deploy --template-file ${ROOT_TEMPLATE} --s3-bucket ${DEPLOY_BUCKET} --s3-prefix ${UPDATED_TEMPLATE_KEY} --stack-name ${STACK_NAME} --parameter-overrides ${PARAM_OVERRIDES} --capabilities CAPABILITY_NAMED_IAM ${PROFILE_OPT} ${REGION_OPT}"
 aws cloudformation deploy --template-file ${ROOT_TEMPLATE} --s3-bucket ${DEPLOY_BUCKET} --s3-prefix ${TURBINE_PREFIX}${UPDATED_TEMPLATE_KEY} --stack-name ${STACK_NAME} --parameter-overrides ${PARAM_OVERRIDES} --capabilities CAPABILITY_NAMED_IAM ${PROFILE_OPT} ${REGION_OPT}
 check_for_error $? "Failed to deploy template"
-

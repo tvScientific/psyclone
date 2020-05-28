@@ -1,5 +1,10 @@
 Description: Example of a dummy additional template
   Distributions
+
+Parameters:
+  VpcId:
+    Type: String
+
 Outputs:
   SecurityGroupIDs:
     Value: !Join

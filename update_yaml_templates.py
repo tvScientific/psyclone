@@ -80,7 +80,7 @@ class UpdateTemplates:
         if 'Parameters' in additional_template.keys():
             template_params = additional_template['Parameters']
             add_keys_list = additional_template['Parameters'].keys()
-            resource_params = {'Ref': param for param in additional_template['Parameters'].keys()}
+            resource_params = {param: {'Ref': param} for param in additional_template['Parameters'].keys()}
         else:
             template_params = {}
             add_keys_list = []

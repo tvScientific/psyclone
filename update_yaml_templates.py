@@ -34,7 +34,7 @@ class UpdateTemplates:
                                    "turbine-{}.template".format(template_name))) as infile:
                 self.templates_dict[template_name] = load_yaml(infile)
 
-    def _save_templates(self):
+    def save_templates(self):
         for template_name in self.templates_dict.keys():
             with open(os.path.join(self.updated_templates_path,
                                    "turbine-{}.template".format(template_name)), 'w') as outfile:
@@ -69,7 +69,7 @@ class UpdateTemplates:
                     self.templates_dict[template_name]['Resources']['IamRole']['Properties'][
                         'ManagedPolicyArns'] += arn_list
 
-    def _add_template(self, additional_template_path, extra_parameters={}):
+    def add_template(self, additional_template_path, parameters_and_vals={}):
 
         with open(additional_template_path) as template_file:
             # Load yaml used for now but this can be changed if need be
@@ -77,15 +77,15 @@ class UpdateTemplates:
 
         if 'Parameters' in additional_template.keys():
             template_params = {key: value for key, value in additional_template['Parameters'].items() if
-                               key not in extra_parameters.keys()}
+                               key not in parameters_and_vals.keys()}
             add_keys_list = additional_template['Parameters'].keys()
             resource_params = {param: {'Ref': param} for param in additional_template['Parameters'].keys() if
-                               param not in extra_parameters.keys()}
+                               param not in parameters_and_vals.keys()}
 
-            resource_params = {**resource_params, **extra_parameters}
+            resource_params = {**resource_params, **parameters_and_vals}
 
         else:
-            if extra_parameters:
+            if parameters_and_vals:
                 raise ValueError('There are no input parameters on the template can not pass in extra_param_values')
             template_params = {}
             add_keys_list = []
@@ -117,12 +117,11 @@ class UpdateTemplates:
         self.templates_dict['master']['Resources'].update(resource_add)
 
     def update_templates(self, additional_template_path=None):
-        self._load_templates()
         self.add_policies()
         if additional_template_path:
-            self._add_template(additional_template_path,
-                               extra_parameters={"VpcId": {"Fn::GetAtt": ["VPCStack", "Outputs.VPCID"]}})
-        self._save_templates()
+            self.add_template(additional_template_path,
+                               parameters_and_vals={"VpcId": {"Fn::GetAtt": ["VPCStack", "Outputs.VPCID"]}})
+        self.save_templates()
 
 
 if __name__ == "__main__":

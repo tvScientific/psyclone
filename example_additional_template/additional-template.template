@@ -4,6 +4,8 @@ Description: Example of a dummy additional template
 Parameters:
   VpcId:
     Type: String
+  TestParam:
+    Type: String
 
 Outputs:
   SecurityGroupIDs:

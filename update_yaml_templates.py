@@ -14,6 +14,7 @@ logger.setLevel(logging.INFO)
 
 
 class UpdateTemplates:
+    # better names
     def __init__(self, templates_path, policies_base_path, updated_templates_path, stage_name):
         self.templates_path = templates_path
         self.policies_base_path = policies_base_path
@@ -100,7 +101,7 @@ class UpdateTemplates:
                     str(overlapped_keys)))
 
         # Use filename converted to PascalCase to set the name of the stack resource
-        template_file_name = additional_template_path.rsplit('.')[0].rsplit('/')[-1]
+        template_file_name = additional_template_path.rsplit('.', 1)[0].rsplit('/', 1)[-1]
         sub_stack_name = self.to_pascal_case(template_file_name)
 
         template_path_s3 = 'templates/additional_templates/' + additional_template_path.rsplit('/')[-1]

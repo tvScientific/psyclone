@@ -93,8 +93,11 @@ class UpdateTemplates:
 
         existing_keys_lists = self.templates_dict['master']['Parameters'].keys()
 
-        if any((True for new_key in existing_keys_lists if new_key in add_keys_list)):
-            raise KeyError('There is an overlap in parameters between the additional template and the master template')
+        overlapped_keys = [new_key for new_key in existing_keys_lists if new_key in add_keys_list]
+        if len(overlapped_keys):
+            raise KeyError(
+                'There is an overlap in parameters between the additional template and the master template. {}'.format(
+                    str(overlapped_keys)))
 
         # Use filename converted to PascalCase to set the name of the stack resource
         template_file_name = additional_template_path.rsplit('.')[0].rsplit('/')[-1]
@@ -120,7 +123,7 @@ class UpdateTemplates:
         self.add_policies()
         if additional_template_path:
             self.add_template(additional_template_path,
-                               parameters_and_vals={"VpcId": {"Fn::GetAtt": ["VPCStack", "Outputs.VPCID"]}})
+                              parameters_and_vals={"VpcId": {"Fn::GetAtt": ["VPCStack", "Outputs.VPCID"]}})
         self.save_templates()
 
 

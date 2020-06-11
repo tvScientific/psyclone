@@ -56,21 +56,20 @@ check_for_error() {
 echo ''
 echo "CREATING TEMPLATES..."
 
-python3 update_yaml_templates.py "${TEMPLATE_KEY}" "${UPDATED_TEMPLATE_KEY}" "${STAGE}" "${POLICIES_PATH}" "${ADDITIONAL_TEMPLATE_PATH}"
+#python3 update_yaml_templates.py "${TEMPLATE_KEY}" "${UPDATED_TEMPLATE_KEY}" "${STAGE}" "${POLICIES_PATH}" "${ADDITIONAL_TEMPLATE_PATH}"
 echo "templates_updated"
 # If there is an additional template copy into templates_updated folder so it is deployed with the rest of the templates
 if [[ ! -z "${ADDITIONAL_TEMPLATE_PATH}" ]]; then
     TEMPLATE_NAME=$(basename ${ADDITIONAL_TEMPLATE_PATH})
-    PACKAGED_TEMPLATE_DIR="templates_updated/additional_templates"
+    PACKAGED_TEMPLATE_DIR="./templates_updated/additional_templates"
+    echo $(pwd)
     rm -rf "${PACKAGED_TEMPLATE_DIR}"
     mkdir "${PACKAGED_TEMPLATE_DIR}"
-    # for TEMPLATE_PATH in $(ls "${ADDITIONAL_TEMPLATE_PATH}*.template")
-    # do
-    # TEMPLATE_NAME=$(basename ${ADDITIONAL_TEMPLATE_PATH})
-    # echo "run packaging on "$i
-    # aws cloudformation blah
-    # done
-    aws cloudformation package --template-file ${ADDITIONAL_TEMPLATE_PATH} --s3-bucket ${DEPLOY_BUCKET} --s3-prefix ${S3_PACKAGE_KEY} --output-template-file ${PACKAGED_TEMPLATE_DIR}/${TEMPLATE_NAME} ${PROFILE_OPT} ${REGION_OPT}
+    for TEMPLATE_PATH in ${ADDITIONAL_TEMPLATE_PATH}*.template; do
+        TEMPLATE_NAME=$(basename "${TEMPLATE_PATH}")
+        echo "run packaging on  ${TEMPLATE_NAME} ${TEMPLATE_PATH} to ${PACKAGED_TEMPLATE_DIR}/${TEMPLATE_NAME} $(pwd)"
+        aws cloudformation package --template-file ${ADDITIONAL_TEMPLATE_PATH}/${TEMPLATE_NAME} --s3-bucket ${DEPLOY_BUCKET} --s3-prefix ${S3_PACKAGE_KEY} --output-template-file "${PACKAGED_TEMPLATE_DIR}/${TEMPLATE_NAME}" ${PROFILE_OPT} ${REGION_OPT}
+    done
 fi
 
 # Create Bucket for lambda code and to store scripts for setting up airflow

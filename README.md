@@ -21,6 +21,13 @@ as nested and uploaded as part of the project level deployment.
 The deployment script will copy all files in the directory of the additional template into templates_updated/additional_templates however it will be uploaded to the 
 deployment s3 under templates/additional_templates, any nested templates should be aware of this and look to point to the QSS3Bucket/QSS3Prefix/templates/additional_templates.
 
+### Changes to templates
+Some small changes to the base templates and files from the original fork have had to be made:
+
+1. scripts/systemd/airflow-webserver.service -- removal of 2 lines, specifying user and user-group this allows airflow to run as root on the webserver 
+2. templates/turbine-master.template -- Change to MinValue of WebserverPort down to 0 so we can set to 80 needed for websever security
+3. templates/turbine-cluster.template -- Change to MinValue of WebserverPort down to 0 so we can set to 80 needed for websever security
+4. templates/turbine-webserver.template -- Change to MinValue of WebserverPort down to 0 so we can set to 80 needed for websever security
 
 ### List of params that can be overridden
 SchedulerInstanceType

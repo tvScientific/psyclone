@@ -14,12 +14,11 @@ logger.setLevel(logging.INFO)
 
 
 class UpdateTemplates:
-    def __init__(self, templates_path, policies_base_path, updated_templates_path, stage_name,
-                 additional_templates_path):
+    # better names
+    def __init__(self, templates_path, policies_base_path, updated_templates_path, stage_name):
         self.templates_path = templates_path
         self.policies_base_path = policies_base_path
         self.updated_templates_path = updated_templates_path
-        self.additional_templates_path = additional_templates_path
         self.stage_name = stage_name
         self.template_list = ['master', 'cluster', 'scheduler', 'webserver', 'workerset']
         self.templates_dict = dict()
@@ -36,7 +35,7 @@ class UpdateTemplates:
                                    "turbine-{}.template".format(template_name))) as infile:
                 self.templates_dict[template_name] = load_yaml(infile)
 
-    def _save_templates(self):
+    def save_templates(self):
         for template_name in self.templates_dict.keys():
             with open(os.path.join(self.updated_templates_path,
                                    "turbine-{}.template".format(template_name)), 'w') as outfile:
@@ -71,31 +70,41 @@ class UpdateTemplates:
                     self.templates_dict[template_name]['Resources']['IamRole']['Properties'][
                         'ManagedPolicyArns'] += arn_list
 
-    def _add_templates(self):
+    def add_template(self, additional_template_path, parameters_and_vals={}):
 
-        with open(self.additional_templates_path) as template_file:
+        with open(additional_template_path) as template_file:
             # Load yaml used for now but this can be changed if need be
             additional_template = load_yaml(template_file.read())
 
         if 'Parameters' in additional_template.keys():
-            template_params = additional_template['Parameters']
+            template_params = {key: value for key, value in additional_template['Parameters'].items() if
+                               key not in parameters_and_vals.keys()}
             add_keys_list = additional_template['Parameters'].keys()
-            resource_params = {param: {'Ref': param} for param in additional_template['Parameters'].keys()}
+            resource_params = {param: {'Ref': param} for param in additional_template['Parameters'].keys() if
+                               param not in parameters_and_vals.keys()}
+
+            resource_params = {**resource_params, **parameters_and_vals}
+
         else:
+            if parameters_and_vals:
+                raise ValueError('There are no input parameters on the template can not pass in extra_param_values')
             template_params = {}
             add_keys_list = []
             resource_params = None
 
         existing_keys_lists = self.templates_dict['master']['Parameters'].keys()
 
-        if any((True for new_key in existing_keys_lists if new_key in add_keys_list)):
-            raise KeyError('There is an overlap in parameters between the additional template and the master template')
+        overlapped_keys = [new_key for new_key in existing_keys_lists if new_key in add_keys_list]
+        if len(overlapped_keys):
+            raise KeyError(
+                'There is an overlap in parameters between the additional template and the master template. {}'.format(
+                    str(overlapped_keys)))
 
         # Use filename converted to PascalCase to set the name of the stack resource
-        template_file_name = self.additional_templates_path.rsplit('.')[0].rsplit('/')[-1]
+        template_file_name = additional_template_path.rsplit('.', 1)[0].rsplit('/', 1)[-1]
         sub_stack_name = self.to_pascal_case(template_file_name)
 
-        template_path_s3 = 'templates/additional_templates/' + self.additional_templates_path.rsplit('/')[-1]
+        template_path_s3 = 'templates/additional_templates/' + additional_template_path.rsplit('/')[-1]
         template_url = {'Fn::Join': ['', [{'Fn::Sub': 'https://${QSS3BucketName}.s3.amazonaws.com/'},
                                           {'Ref': 'QSS3KeyPrefix'}, template_path_s3]]}
 
@@ -111,15 +120,12 @@ class UpdateTemplates:
 
         self.templates_dict['master']['Resources'].update(resource_add)
 
-    def update_outputs(self):
-        pass
-
-    def update_templates(self):
-        self._load_templates()
+    def update_templates(self, additional_template_path=None):
         self.add_policies()
-        if self.additional_templates_path:
-            self._add_templates()
-        self._save_templates()
+        if additional_template_path:
+            self.add_template(additional_template_path,
+                              parameters_and_vals={"VpcId": {"Fn::GetAtt": ["VPCStack", "Outputs.VPCID"]}})
+        self.save_templates()
 
 
 if __name__ == "__main__":
@@ -149,6 +155,5 @@ if __name__ == "__main__":
     POLICIES_BASE_PATH = str(sys.argv[4])
     ADDITIONAL_TEMPLATES_PATH = str(sys.argv[5])
 
-    update_templates = UpdateTemplates(TEMPLATES_PATH, POLICIES_BASE_PATH, UPDATED_TEMPLATES_PATH, STAGE_NAME,
-                                       ADDITIONAL_TEMPLATES_PATH)
-    update_templates.update_templates()
+    update_templates = UpdateTemplates(TEMPLATES_PATH, POLICIES_BASE_PATH, UPDATED_TEMPLATES_PATH, STAGE_NAME)
+    update_templates.update_templates(ADDITIONAL_TEMPLATES_PATH)

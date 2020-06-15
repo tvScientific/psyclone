@@ -133,9 +133,9 @@ if __name__ == "__main__":
     """
     Get command line arguments
     """
-    blank_acceptable = [4, 5]
+    blank_acceptable = [4]
 
-    EXPECTED_ARG_COUNT = 6
+    EXPECTED_ARG_COUNT = 5
     if len(sys.argv) != EXPECTED_ARG_COUNT:
 
         logger.error(
@@ -152,8 +152,7 @@ if __name__ == "__main__":
     TEMPLATES_PATH = str(sys.argv[1])
     UPDATED_TEMPLATES_PATH = str(sys.argv[2])
     STAGE_NAME = str(sys.argv[3])
-    POLICIES_BASE_PATH = str(sys.argv[4])
-    ADDITIONAL_TEMPLATES_PATH = str(sys.argv[5])
+    ADDITIONAL_TEMPLATES_PATH = str(sys.argv[4])
 
     update_templates = UpdateTemplates(TEMPLATES_PATH, POLICIES_BASE_PATH, UPDATED_TEMPLATES_PATH, STAGE_NAME)
     update_templates.update_templates(ADDITIONAL_TEMPLATES_PATH)

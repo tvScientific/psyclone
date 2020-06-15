@@ -1,0 +1,21 @@
+Description: Example of a dummy additional template
+  Distributions
+
+Parameters:
+  VpcId:
+    Type: String
+  TestParam:
+    Type: String
+
+Outputs:
+  SecurityGroupIDs:
+    Value: !Join
+      - ','
+      - - !Ref 'DEVSecurityGroupCFD0'
+Resources:
+  TestSecurityGroupCFD0:
+    Properties:
+      GroupDescription: A security group to hold IP addresses which allow access to
+        CloudFront
+      GroupName: DEVSecurityGroupCFD0
+    Type: AWS::EC2::SecurityGroup

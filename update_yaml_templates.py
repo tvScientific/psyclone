@@ -127,32 +127,3 @@ class UpdateTemplates:
                               parameters_and_vals={"VpcId": {"Fn::GetAtt": ["VPCStack", "Outputs.VPCID"]}})
         self.save_templates()
 
-
-if __name__ == "__main__":
-
-    """
-    Get command line arguments
-    """
-    blank_acceptable = [4]
-
-    EXPECTED_ARG_COUNT = 5
-    if len(sys.argv) != EXPECTED_ARG_COUNT:
-
-        logger.error(
-            "Cannot generate templates. Incorrect number of arguments: {} given, {} expected".format(
-                len(sys.argv), EXPECTED_ARG_COUNT) + str(sys.argv))
-        raise ValueError(
-            "Cannot generate templates. Incorrect number of arguments: {} given, {} expected".format(
-                len(sys.argv), EXPECTED_ARG_COUNT) + str(sys.argv))
-    else:
-        for argnum, arg in enumerate(sys.argv):
-            if not arg and argnum not in blank_acceptable:
-                raise ValueError("Blank value found for {}".format(argnum))
-
-    TEMPLATES_PATH = str(sys.argv[1])
-    UPDATED_TEMPLATES_PATH = str(sys.argv[2])
-    STAGE_NAME = str(sys.argv[3])
-    ADDITIONAL_TEMPLATES_PATH = str(sys.argv[4])
-
-    update_templates = UpdateTemplates(TEMPLATES_PATH, POLICIES_BASE_PATH, UPDATED_TEMPLATES_PATH, STAGE_NAME)
-    update_templates.update_templates(ADDITIONAL_TEMPLATES_PATH)

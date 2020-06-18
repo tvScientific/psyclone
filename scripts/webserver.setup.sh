@@ -13,5 +13,5 @@ echo "AIRFLOW__WEBSERVER__BASE_URL=$BASE_URL" \
 echo "AIRFLOW__WEBSERVER__WEB_SERVER_PORT=${WEB_SERVER_PORT}" \
   >> /etc/sysconfig/airflow.env
 
-systemctl enable --now airflow-webserver
+systemctl enable airflow-webserver
 cd_agent

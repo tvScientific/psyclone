@@ -49,7 +49,7 @@ class UpdateTemplates:
                 if "worker_instance_type" in self.STAGE_NAMES_AND_CONFIGS[self.stage_name]:
                     instance_type = self.STAGE_NAMES_AND_CONFIGS[self.stage_name]["worker_instance_type"]
                     logger.info("Updating templates to use {} as worker instance type from class attribute".format(instance_type))
-                    self.templates_dict["cluster"]["Resources"]["WorkerSetStack"]["Properties"]["Parameters"]["InstanceType"] = instance_overwrite
+                    self.templates_dict["cluster"]["Resources"]["WorkerSetStack"]["Properties"]["Parameters"]["InstanceType"] = instance_type
                 else:
                     logger.info("No worker_instance_type detected")
         return

@@ -35,21 +35,14 @@ class UpdateTemplates:
         self._load_templates()
         self.random_string = self._random_generator()
 
-    def update_instance_types(self, instance_overwrite):
-        if instance_overwrite:
-            logger.info(
-                "Updating templates to use {} as worker instance type from project-deploy.sh instance overwrite".format(
-                    instance_overwrite)
-            )
-            self.templates_dict["cluster"]["Resources"]["WorkerSetStack"]["Properties"]["Parameters"]["InstanceType"] = instance_overwrite
-            return
-        elif self.STAGE_NAMES_AND_CONFIGS:
+    def update_instance_types(self):
+        if self.STAGE_NAMES_AND_CONFIGS:
             # First check that the stage matches, then check if a custom instance type is defined for that stage
             if self.stage_name in self.STAGE_NAMES_AND_CONFIGS:
                 if "worker_instance_type" in self.STAGE_NAMES_AND_CONFIGS[self.stage_name]:
                     instance_type = self.STAGE_NAMES_AND_CONFIGS[self.stage_name]["worker_instance_type"]
                     logger.info("Updating templates to use {} as worker instance type from class attribute".format(instance_type))
-                    self.templates_dict["cluster"]["Resources"]["WorkerSetStack"]["Properties"]["Parameters"]["InstanceType"] = instance_type
+                    self.templates_dict["master"]["Parameters"]["WorkerInstanceType"]["Default"] = instance_type
                 else:
                     logger.info("No worker_instance_type detected")
         return

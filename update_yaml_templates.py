@@ -1,8 +1,11 @@
-import json
-import os
-import sys
 import glob
+import json
 import logging
+import os
+import random
+import string
+import sys
+
 from cfn_tools import load_yaml, dump_yaml
 
 logger = logging.getLogger(__name__)
@@ -14,6 +17,13 @@ logger.setLevel(logging.INFO)
 
 
 class UpdateTemplates:
+
+    STAGE_NAMES_AND_CONFIGS = ()
+
+    @staticmethod
+    def _random_generator(size=3, chars=string.ascii_lowercase):
+        return ''.join(random.choice(chars) for x in range(size)).title()
+
     # better names
     def __init__(self, templates_path, policies_base_path, updated_templates_path, stage_name):
         self.templates_path = templates_path
@@ -23,6 +33,26 @@ class UpdateTemplates:
         self.template_list = ['master', 'cluster', 'scheduler', 'webserver', 'workerset']
         self.templates_dict = dict()
         self._load_templates()
+        self.random_string = self._random_generator()
+
+    def update_instance_types(self, instance_overwrite):
+        if instance_overwrite:
+            logger.info(
+                "Updating templates to use {} as worker instance type from project-deploy.sh instance overwrite".format(
+                    instance_overwrite)
+            )
+            self.templates_dict["cluster"]["Resources"]["WorkerSetStack"]["Properties"]["Parameters"]["InstanceType"] = instance_overwrite
+            return
+        elif self.STAGE_NAMES_AND_CONFIGS:
+            # First check that the stage matches, then check if a custom instance type is defined for that stage
+            if self.stage_name in self.STAGE_NAMES_AND_CONFIGS:
+                if "worker_instance_type" in self.STAGE_NAMES_AND_CONFIGS[self.stage_name]:
+                    instance_type = self.STAGE_NAMES_AND_CONFIGS[self.stage_name]["worker_instance_type"]
+                    logger.info("Updating templates to use {} as worker instance type from class attribute".format(instance_type))
+                    self.templates_dict["cluster"]["Resources"]["WorkerSetStack"]["Properties"]["Parameters"]["InstanceType"] = instance_overwrite
+                else:
+                    logger.info("No worker_instance_type detected")
+        return
 
     @staticmethod
     def to_pascal_case(filename):

@@ -73,7 +73,7 @@ class UpdateTemplates:
                 for policy_path in policies_list:
                     with open(policy_path) as policy:
                         policy_loaded = json.load(policy)
-                        policy["Statement"]["Resource"] = [{'Fn::Sub': resource} for resource in policy["Statement"]["Resource"]]
+                        policy_loaded["Statement"]["Resource"] = [{'Fn::Sub': resource} for resource in policy_loaded["Statement"]["Resource"]]
                         policy_name = policy_path.rsplit('/')[-1].split('.')[0]
                         new_policy = {'PolicyName': {
                             'Fn::Sub': '{policy_name}-{stage_name}-{nesting}'.format(policy_name=policy_name,

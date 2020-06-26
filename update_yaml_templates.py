@@ -79,7 +79,7 @@ class UpdateTemplates:
                             'Fn::Sub': '{policy_name}-{stage_name}-{nesting}'.format(policy_name=policy_name,
                                                                                      stage_name=self.stage_name,
                                                                                      nesting=template_name)},
-                            'PolicyDocument': {'Fn::Sub': policy_loaded}}
+                            'PolicyDocument': {policy_loaded}}
 
                         self.templates_dict[template_name]['Resources']['IamRole']['Properties']['Policies'].append(
                             new_policy)

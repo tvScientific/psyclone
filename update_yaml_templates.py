@@ -17,7 +17,6 @@ logger.setLevel(logging.INFO)
 
 
 class UpdateTemplates:
-
     STAGE_NAMES_AND_CONFIGS = ()
 
     @staticmethod
@@ -41,7 +40,8 @@ class UpdateTemplates:
             if self.stage_name in self.STAGE_NAMES_AND_CONFIGS:
                 if "worker_instance_type" in self.STAGE_NAMES_AND_CONFIGS[self.stage_name]:
                     instance_type = self.STAGE_NAMES_AND_CONFIGS[self.stage_name]["worker_instance_type"]
-                    logger.info("Updating templates to use {} as worker instance type from class attribute".format(instance_type))
+                    logger.info("Updating templates to use {} as worker instance type from class attribute".format(
+                        instance_type))
                     self.templates_dict["master"]["Parameters"]["WorkerInstanceType"]["Default"] = instance_type
                 else:
                     logger.info("No worker_instance_type detected")
@@ -78,7 +78,7 @@ class UpdateTemplates:
                             'Fn::Sub': '{policy_name}-{stage_name}-{nesting}'.format(policy_name=policy_name,
                                                                                      stage_name=self.stage_name,
                                                                                      nesting=template_name)},
-                            'PolicyDocument': policy_loaded}
+                            'PolicyDocument': {'Fn::Sub': policy_loaded}}
 
                         self.templates_dict[template_name]['Resources']['IamRole']['Properties']['Policies'].append(
                             new_policy)
@@ -149,4 +149,3 @@ class UpdateTemplates:
             self.add_template(additional_template_path,
                               parameters_and_vals={"VpcId": {"Fn::GetAtt": ["VPCStack", "Outputs.VPCID"]}})
         self.save_templates()
-

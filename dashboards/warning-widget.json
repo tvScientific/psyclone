@@ -1,0 +1,10 @@
+{
+    "type": "text",
+    "x": 0,
+    "y": 0,
+    "width": 24,
+    "height": 6,
+    "properties": {
+        "markdown": "\n# IMPORTANT - This Dashboard is Automatically Deployed by CloudFormation!\n## If you manually edit anything your changes will be lost on the next CloudFormation deployment\n \nIf you wish to retain any manual changes then:\n\n1. Select **Actions** dropdown above, then **View/edit source**\n2. Copy the JSON source using **Copy source** button\n3. Update the relevant source file in the code repository (exact filename is important): e.g. **'./dashboards/dashboard-<StageName>.json'** if using unique dashboard or **'./dashboards/dashboard-template.json'** if not \n4. Check in the change\n5. On the next deployment your changes will be preserved. Using unique dashboard: <UniqueDashboard>\n"
+    }
+}

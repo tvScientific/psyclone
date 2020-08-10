@@ -8,6 +8,8 @@ import sys
 
 from cfn_tools import load_yaml, dump_yaml
 
+from dashboards.dativa_dashboard_template import DativaDashboardTemplate
+
 logger = logging.getLogger(__name__)
 stdout = logging.StreamHandler(sys.stdout)
 stdout.setFormatter(logging.Formatter('%(message)s'))
@@ -152,3 +154,19 @@ class UpdateTemplates:
             self.add_template(additional_template_path,
                               parameters_and_vals={"VpcId": {"Fn::GetAtt": ["VPCStack", "Outputs.VPCID"]}})
         self.save_templates()
+
+    def generate_dashboard_template(self, project_name, stage_name, template_path, resource_names):
+        """
+        adds a basic generic dashboard with tracking on the webserver, scheduler and worker nodes.
+        To expand this method, subclass as needed
+        :param project_name: short string identifying project
+        :param stage_name: name of stage being deployed to, user to identify unique dashboards
+        :param template_path: path to dashboard templates
+        :param resource_names: the resource names to be referenced. These are passed in as parameters to CloudFormation
+        :return: path to dashboard template file as str
+        """
+
+        dashboard = DativaDashboardTemplate(project_name, stage_name=stage_name, template_path=template_path)
+
+        dashboard_template = dashboard.generate_template(**resource_names)
+        return dashboard_template

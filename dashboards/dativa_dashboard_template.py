@@ -31,6 +31,8 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 import json
 import logging
 import os
+import random
+import string
 
 from troposphere import Ref, Template, Join, Parameter, Sub
 from troposphere import constants
@@ -44,16 +46,29 @@ logger = logging.getLogger("dativa.tools.aws.dashboard")
 
 class DativaDashboardTemplate:  # need to subclass the generic base of templates here.
 
+    @staticmethod
+    def _random_generator(size=3, chars=string.ascii_lowercase):
+        return ''.join(random.choice(chars) for x in range(size)).title()
+
     def __init__(self, project_name, stage_name, source_path="./dashboards", template_path="./templates"):
+        """
+        class to read in and generate the
+        :param project_name: labels the resulting dashboard
+        :param stage_name: stage type being deployed, e.g. PROD, DEV, etc.
+        :param source_path: location where json is stored
+        :param template_path: path to write the templates to -
+        """
         # Note: Module names should use '_' not '-' but some names cannot contain '_' so replace with dashes
         self._project = project_name
         self._dash_project = self._project.replace('_', '-')
 
         self._file_ext = 'json'
+        self._file_ext_output = 'template'
         self._stage_name = stage_name
         self._template_path = template_path
         source_file_unique = "{}/dashboard-{}.{}".format(source_path, self._stage_name, self._file_ext)
         source_file_template = "{}/dashboard-template.{}".format(source_path, self._file_ext)
+        self._random_ascii = self._random_generator()
 
         # Pick up appropriate dashboard if it exists, else use the generic template
         if self.does_unique_dashboard_file_exist(source_file_unique):
@@ -117,12 +132,12 @@ class DativaDashboardTemplate:  # need to subclass the generic base of templates
             Type=constants.STRING,
         ))
         t.add_parameter(Parameter(
-            "SQSATaskQueueName",
+            "SQSTaskQueueName",
             Description="Name of task SQS queue required",
             Type=constants.STRING,
         ))
         t.add_parameter(Parameter(
-            "TurbineTaskStackName",
+            "TurbineStackName",
             Description="Name of Turbine Stack required",
             Type=constants.STRING,
         ))
@@ -179,7 +194,7 @@ class DativaDashboardTemplate:  # need to subclass the generic base of templates
         """
         Create the template
         """
-        return self._save_template(template_name, t.to_json())
+        return self._save_template(template_name, t.to_yaml())
 
     def _find_dashboard_bottom(self, dashboard_source):
 
@@ -197,10 +212,10 @@ class DativaDashboardTemplate:  # need to subclass the generic base of templates
         return json.loads(doc)
 
     def _save_template(self, name, outstr):
-        outname = "{}_{}.{}".format(
-            self._long_project,
+        outname = "{}{}.{}".format(
+            self._project,
             name,
-            self._file_ext)
+            self._file_ext_output)
 
         with open(self._template_path + '/' + outname, 'w') as outfile:
             outfile.write(outstr)

@@ -8,6 +8,8 @@ import sys
 
 from cfn_tools import load_yaml, dump_yaml
 
+from psyclone.dashboards.dativa_dashboard_template import DativaDashboardTemplate
+
 logger = logging.getLogger(__name__)
 stdout = logging.StreamHandler(sys.stdout)
 stdout.setFormatter(logging.Formatter('%(message)s'))
@@ -57,6 +59,47 @@ class UpdateTemplates:
             with open(os.path.join(self.templates_path,
                                    "turbine-{}.template".format(template_name))) as infile:
                 self.templates_dict[template_name] = load_yaml(infile)
+
+    def _add_outputs_for_dashboards(self):
+        """ returns the parameters needed for the dashboard to be added"""
+        # return a dict of the output keys used
+        self.templates_dict['cluster']['Outputs'].update(
+            {'SQSTaskQueueName': {'Value': {'Fn::GetAtt': ['TaskQueue', 'QueueName']}}}
+        )
+        self.templates_dict['workerset']['Outputs'].update(
+            {'TurbineStackName': {'Value': {'Ref': 'AWS::StackName'}}}
+        )
+        # Add outputs to individual stacks
+        self.templates_dict['scheduler']['Outputs'].update(
+            {'EC2AutoScalingGroupName': {'Value': {'Ref': 'AutoScalingGroup'}}}
+        )
+        self.templates_dict['webserver']['Outputs'].update(
+            {'EC2AutoScalingGroupName': {'Value': {'Ref': 'AutoScalingGroup'}}}
+        )
+        self.templates_dict['workerset']['Outputs'].update(
+            {'EC2AutoScalingGroupName': {'Value': {'Ref': 'AutoScalingGroup'}}}
+        )
+        # pass them through to cluster stack so it's available at top level
+        self.templates_dict['cluster']['Outputs'].update(
+            {'TurbineStackName': {'Value': {'Fn::GetAtt': ['WorkerSetStack', 'Outputs.TurbineStackName']}}}
+        )
+        self.templates_dict['cluster']['Outputs'].update(
+            {'EC2AutoScalingGroupName': {'Value': {'Fn::GetAtt': ['SchedulerStack', 'Outputs.EC2AutoScalingGroupName']}}}
+        )
+        self.templates_dict['cluster']['Outputs'].update(
+            {'EC2AutoScalingGroupNameWebserver': {'Value': {'Fn::GetAtt': ['WebserverStack', 'Outputs.EC2AutoScalingGroupName']}}}
+        )
+        self.templates_dict['cluster']['Outputs'].update(
+            {'EC2AutoScalingGroupNameWorker': {'Value': {'Fn::GetAtt': ['WorkerSetStack', 'Outputs.EC2AutoScalingGroupName']}}}
+        )
+
+        return {
+            'SQSTaskQueueName': {"Fn::GetAtt": ["TurbineCluster", "Outputs.SQSTaskQueueName"]},
+            'TurbineStackName': {"Fn::GetAtt": ["TurbineCluster", "Outputs.TurbineStackName"]},
+            'EC2AutoScalingGroupName': {"Fn::GetAtt": ["TurbineCluster", "Outputs.EC2AutoScalingGroupName"]},
+            'EC2AutoScalingGroupNameWebserver': {"Fn::GetAtt": ["TurbineCluster", "Outputs.EC2AutoScalingGroupNameWebserver"]},
+            'EC2AutoScalingGroupNameWorker': {"Fn::GetAtt": ["TurbineCluster", "Outputs.EC2AutoScalingGroupNameWorker"]},
+        }
 
     def save_templates(self):
         for template_name in self.templates_dict.keys():
@@ -152,3 +195,24 @@ class UpdateTemplates:
             self.add_template(additional_template_path,
                               parameters_and_vals={"VpcId": {"Fn::GetAtt": ["VPCStack", "Outputs.VPCID"]}})
         self.save_templates()
+
+    def generate_dashboard_template(self, project_name, stage_name, source_path, template_path):
+        """
+        adds a basic generic dashboard with tracking on the webserver, scheduler and worker nodes.
+        To expand this method, subclass as needed
+        :param project_name: short string identifying project
+        :param stage_name: name of stage being deployed to, user to identify unique dashboards
+        :param source_path: path to dashboard templates
+        :param template_path: path to dashboard templates
+        :return: path to dashboard template file as str and the parameters needed as a dict
+        """
+        outputs = self._add_outputs_for_dashboards()
+        dashboard = DativaDashboardTemplate(
+            project_name,
+            stage_name=stage_name,
+            source_path=source_path,
+            template_path=template_path
+        )
+
+        dashboard_template = dashboard.generate_template(**outputs)
+        return dashboard_template, outputs

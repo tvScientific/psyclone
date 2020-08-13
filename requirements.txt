@@ -1,0 +1,9 @@
+awscli
+black
+cfn-flip
+cfn-lint
+flake8
+pytest
+taskcat
+yq
+troposphere

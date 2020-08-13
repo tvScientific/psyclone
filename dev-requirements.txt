@@ -8,3 +8,4 @@ git+git://github.com/PyCQA/pylint.git#egg=pylint
 pytest
 taskcat
 yq
+troposphere

@@ -66,7 +66,7 @@ class UpdateTemplates:
         self.templates_dict['cluster']['Outputs'].update(
             {'SQSTaskQueueName': {'Value': {'Fn::GetAtt': ['TaskQueue', 'QueueName']}}}
         )
-        self.templates_dict['cluster']['Outputs'].update(
+        self.templates_dict['workerset']['Outputs'].update(
             {'TurbineStackName': {'Value': {'Ref': 'AWS::StackName'}}}
         )
         # Add outputs to individual stacks
@@ -80,6 +80,9 @@ class UpdateTemplates:
             {'EC2AutoScalingGroupName': {'Value': {'Ref': 'AutoScalingGroup'}}}
         )
         # pass them through to cluster stack so it's available at top level
+        self.templates_dict['cluster']['Outputs'].update(
+            {'TurbineStackName': {'Value': {'Fn::GetAtt': ['WorkerSetStack', 'Outputs.TurbineStackName']}}}
+        )
         self.templates_dict['cluster']['Outputs'].update(
             {'EC2AutoScalingGroupName': {'Value': {'Fn::GetAtt': ['SchedulerStack', 'Outputs.EC2AutoScalingGroupName']}}}
         )

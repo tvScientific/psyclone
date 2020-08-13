@@ -44,7 +44,7 @@ Initialise logger
 logger = logging.getLogger("dativa.tools.aws.dashboard")
 
 
-class DativaDashboardTemplate:  # need to subclass the generic base of templates here.
+class DativaDashboardTemplate:
 
     @staticmethod
     def _random_generator(size=3, chars=string.ascii_lowercase):

@@ -15,7 +15,8 @@
                 ],
                 "region": "${AWS::Region}",
                 "title": "SQS Queues",
-                "period": 300
+                "period": 300,
+                "stat": "Maximum"
             }
         },
         {
@@ -44,14 +45,14 @@
             "height": 6,
             "properties": {
                 "metrics": [
-                    [ "AWS/EC2", "CPUUtilization", "AutoScalingGroupName", "${EC2AutoScalingGroupName}" ],
-                    [ "...", "${EC2AutoScalingGroupNameWebserver}" ],
+                    [ "AWS/EC2", "CPUUtilization", "AutoScalingGroupName", "${EC2AutoScalingGroupNameWebserver}" ],
+                    [ "...", "${EC2AutoScalingGroupName}" ],
                     [ "...", "${EC2AutoScalingGroupNameWorker}" ]
                 ],
                 "view": "timeSeries",
                 "stacked": false,
                 "region": "${AWS::Region}",
-                "title": "Credit Utilization (CPU)",
+                "title": "CPU Utilization (%)",
                 "period": 300,
                 "stat": "Average"
             }
@@ -64,15 +65,16 @@
             "height": 6,
             "properties": {
                 "metrics": [
-                    [ "AWS/EC2", "CPUCreditBalance", "AutoScalingGroupName", "${EC2AutoScalingGroupName}", { "region": "${AWS::Region}" } ],
-                    [ "...", "${EC2AutoScalingGroupNameWebserver}", { "region": "${AWS::Region}" } ]
+                    [ "AWS/EC2", "CPUCreditBalance", "AutoScalingGroupName", "${EC2AutoScalingGroupNameWebserver}", { "region": "${AWS::Region}" } ],
+                    [ "...", "${EC2AutoScalingGroupName}", { "region": "${AWS::Region}" } ],
+                    [ "...", "${EC2AutoScalingGroupNameWorker}", { "region": "${AWS::Region}" } ]
                 ],
                 "view": "timeSeries",
                 "stacked": false,
                 "region": "${AWS::Region}",
-                "title": "Credit Balance (CPU)",
+                "title": "Credit Balance",
                 "period": 300,
-                "stat": "Average"
+                "stat": "Min"
             }
         },
         {
@@ -84,32 +86,15 @@
             "properties": {
                 "metrics": [
                     [ "AWS/EC2", "CPUCreditUsage", "AutoScalingGroupName", "${EC2AutoScalingGroupName}", { "region": "${AWS::Region}" } ],
+                    [ "...", "${EC2AutoScalingGroupNameWorker}", { "region": "${AWS::Region}" } ],
                     [ "...", "${EC2AutoScalingGroupNameWebserver}", { "region": "${AWS::Region}" } ]
                 ],
                 "view": "timeSeries",
                 "stacked": false,
                 "region": "${AWS::Region}",
-                "title": "Credit Usage (CPU)",
+                "title": "Credit Usage",
                 "period": 300,
                 "stat": "Average"
-            }
-        },
-        {
-            "type": "metric",
-            "x": 12,
-            "y": 12,
-            "width": 12,
-            "height": 6,
-            "properties": {
-                "view": "timeSeries",
-                "stacked": false,
-                "metrics": [
-                    [ "AWS/EC2", "CPUUtilization", "AutoScalingGroupName", "${EC2AutoScalingGroupNameWorker}" ],
-                    [ "...", "${EC2AutoScalingGroupNameWebserver}" ],
-                    [ "...", "${EC2AutoScalingGroupName}" ]
-                ],
-                "region": "${AWS::Region}",
-                "title": "CPU Utilization "
             }
         }
     ]

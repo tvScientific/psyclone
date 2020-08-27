@@ -223,7 +223,7 @@
               "expression": "SEARCH(' Namespace=\"Deductive/AutoScalingGroup/Instance\" AutoScalingGroup=\"${EC2AutoScalingGroupNameWebserver}\" MetricName=\"MemFree\" ', 'Minimum', 300)",
               "id": "e1",
               "label": "MemFree",
-              "region": "eu-west-1"
+              "region": "${AWS::Region}"
             }
           ]
         ],
@@ -252,7 +252,7 @@
               "expression": "SEARCH(' Namespace=\"Deductive/AutoScalingGroup/Instance\" AutoScalingGroup=\"${EC2AutoScalingGroupNameWebserver}\" MetricName=\"DiskFree\" ', 'Minimum', 300)",
               "id": "e1",
               "label": "DiskFree",
-              "region": "eu-west-1"
+              "region": "${AWS::Region}"
             }
           ]
         ],
@@ -281,7 +281,7 @@
               "expression": "SEARCH(' Namespace=\"Deductive/AutoScalingGroup/Instance\" AutoScalingGroup=\"${EC2AutoScalingGroupNameWebserver}\" MetricName=\"CPUUsage\" ', 'Minimum', 300)",
               "id": "e1",
               "label": "CPUUsage",
-              "region": "eu-west-1"
+              "region": "${AWS::Region}"
             }
           ]
         ],
@@ -310,7 +310,7 @@
               "expression": "SEARCH(' Namespace=\"Deductive/AutoScalingGroup/Instance\" AutoScalingGroup=\"${EC2AutoScalingGroupName}\" MetricName=\"MemFree\" ', 'Minimum', 300)",
               "id": "e1",
               "label": "MemFree",
-              "region": "eu-west-1"
+              "region": "${AWS::Region}"
             }
           ]
         ],
@@ -339,7 +339,7 @@
               "expression": "SEARCH(' Namespace=\"Deductive/AutoScalingGroup/Instance\" AutoScalingGroup=\"${EC2AutoScalingGroupName}\" MetricName=\"DiskFree\" ', 'Minimum', 300)",
               "id": "e1",
               "label": "DiskFree",
-              "region": "eu-west-1"
+              "region": "${AWS::Region}"
             }
           ]
         ],
@@ -368,7 +368,7 @@
               "expression": "SEARCH(' Namespace=\"Deductive/AutoScalingGroup/Instance\" AutoScalingGroup=\"${EC2AutoScalingGroupName}\" MetricName=\"CPUUsage\" ', 'Minimum', 300)",
               "id": "e1",
               "label": "CPUUsage",
-              "region": "eu-west-1"
+              "region": "${AWS::Region}"
             }
           ]
         ],
@@ -397,7 +397,7 @@
               "expression": "SEARCH(' Namespace=\"Deductive/AutoScalingGroup/Instance\" AutoScalingGroup=\"${EC2AutoScalingGroupNameWorker}\" MetricName=\"MemFree\" ', 'Minimum', 300)",
               "id": "e1",
               "label": "MemFree",
-              "region": "eu-west-1"
+              "region": "${AWS::Region}"
             }
           ]
         ],
@@ -426,7 +426,7 @@
               "expression": "SEARCH(' Namespace=\"Deductive/AutoScalingGroup/Instance\" AutoScalingGroup=\"${EC2AutoScalingGroupNameWorker}\" MetricName=\"DiskFree\" ', 'Minimum', 300)",
               "id": "e1",
               "label": "DiskFree",
-              "region": "eu-west-1"
+              "region": "${AWS::Region}"
             }
           ]
         ],
@@ -455,7 +455,7 @@
               "expression": "SEARCH(' Namespace=\"Deductive/AutoScalingGroup/Instance\" AutoScalingGroup=\"${EC2AutoScalingGroupNameWorker}\" MetricName=\"CPUUsage\" ', 'Minimum', 300)",
               "id": "e1",
               "label": "CPUUsage",
-              "region": "eu-west-1"
+              "region": "${AWS::Region}"
             }
           ]
         ],

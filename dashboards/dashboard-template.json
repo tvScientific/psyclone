@@ -1,101 +1,475 @@
- {
-    "widgets": [
-        {
-            "type": "metric",
-            "x": 0,
-            "y": 0,
-            "width": 12,
-            "height": 6,
-            "properties": {
-                "view": "timeSeries",
-                "stacked": false,
-                "metrics": [
-                    [ "AWS/SQS", "ApproximateNumberOfMessagesVisible", "QueueName", "${SQSTaskQueueName}", { "region": "${AWS::Region}" } ],
-                    [ ".", "ApproximateNumberOfMessagesNotVisible", ".", ".", { "region": "${AWS::Region}" } ]
-                ],
-                "region": "${AWS::Region}",
-                "title": "SQS Queues",
-                "period": 300,
-                "stat": "Maximum"
+{
+  "widgets": [
+    {
+      "type": "metric",
+      "x": 0,
+      "y": 0,
+      "width": 12,
+      "height": 6,
+      "properties": {
+        "view": "timeSeries",
+        "stacked": false,
+        "metrics": [
+          [
+            "AWS/SQS",
+            "ApproximateNumberOfMessagesVisible",
+            "QueueName",
+            "${SQSTaskQueueName}",
+            {
+              "region": "${AWS::Region}"
             }
-        },
-        {
-            "type": "metric",
-            "x": 0,
-            "y": 12,
-            "width": 12,
-            "height": 6,
-            "properties": {
-                "metrics": [
-                    [ "Turbine", "ClusterLoad", "StackName", "${TurbineStackName}" ]
-                ],
-                "view": "timeSeries",
-                "stacked": false,
-                "region": "${AWS::Region}",
-                "title": "Cluster Load ",
-                "period": 300,
-                "stat": "Average"
+          ],
+          [
+            ".",
+            "ApproximateNumberOfMessagesNotVisible",
+            ".",
+            ".",
+            {
+              "region": "${AWS::Region}"
             }
-        },
-        {
-            "type": "metric",
-            "x": 12,
-            "y": 0,
-            "width": 12,
-            "height": 6,
-            "properties": {
-                "metrics": [
-                    [ "AWS/EC2", "CPUUtilization", "AutoScalingGroupName", "${EC2AutoScalingGroupNameWebserver}" ],
-                    [ "...", "${EC2AutoScalingGroupName}" ],
-                    [ "...", "${EC2AutoScalingGroupNameWorker}" ]
-                ],
-                "view": "timeSeries",
-                "stacked": false,
-                "region": "${AWS::Region}",
-                "title": "CPU Utilization (%)",
-                "period": 300,
-                "stat": "Average"
+          ]
+        ],
+        "region": "${AWS::Region}",
+        "title": "SQS Queues",
+        "period": 300,
+        "stat": "Maximum"
+      }
+    },
+    {
+      "type": "metric",
+      "x": 12,
+      "y": 0,
+      "width": 12,
+      "height": 6,
+      "properties": {
+        "metrics": [
+          [
+            "AWS/EC2",
+            "CPUUtilization",
+            "AutoScalingGroupName",
+            "${EC2AutoScalingGroupNameWebserver}"
+          ],
+          [
+            "...",
+            "${EC2AutoScalingGroupName}"
+          ],
+          [
+            "...",
+            "${EC2AutoScalingGroupNameWorker}"
+          ]
+        ],
+        "view": "timeSeries",
+        "stacked": false,
+        "region": "${AWS::Region}",
+        "title": "CPU Utilization (%)",
+        "period": 300,
+        "stat": "Maximum"
+      }
+    },
+    {
+      "type": "metric",
+      "x": 0,
+      "y": 6,
+      "width": 12,
+      "height": 6,
+      "properties": {
+        "metrics": [
+          [
+            "AWS/EC2",
+            "CPUCreditUsage",
+            "AutoScalingGroupName",
+            "${EC2AutoScalingGroupNameWebserver}",
+            {
+              "region": "${AWS::Region}"
             }
-        },
-        {
-            "type": "metric",
-            "x": 12,
-            "y": 6,
-            "width": 12,
-            "height": 6,
-            "properties": {
-                "metrics": [
-                    [ "AWS/EC2", "CPUCreditBalance", "AutoScalingGroupName", "${EC2AutoScalingGroupNameWebserver}", { "region": "${AWS::Region}" } ],
-                    [ "...", "${EC2AutoScalingGroupName}", { "region": "${AWS::Region}" } ],
-                    [ "...", "${EC2AutoScalingGroupNameWorker}", { "region": "${AWS::Region}" } ]
-                ],
-                "view": "timeSeries",
-                "stacked": false,
-                "region": "${AWS::Region}",
-                "title": "Credit Balance",
-                "period": 300,
-                "stat": "Minimum"
+          ],
+          [
+            "...",
+            "${EC2AutoScalingGroupName}",
+            {
+              "region": "${AWS::Region}"
             }
-        },
-        {
-            "type": "metric",
-            "x": 0,
-            "y": 6,
-            "width": 12,
-            "height": 6,
-            "properties": {
-                "metrics": [
-                    [ "AWS/EC2", "CPUCreditUsage", "AutoScalingGroupName", "${EC2AutoScalingGroupName}", { "region": "${AWS::Region}" } ],
-                    [ "...", "${EC2AutoScalingGroupNameWorker}", { "region": "${AWS::Region}" } ],
-                    [ "...", "${EC2AutoScalingGroupNameWebserver}", { "region": "${AWS::Region}" } ]
-                ],
-                "view": "timeSeries",
-                "stacked": false,
-                "region": "${AWS::Region}",
-                "title": "Credit Usage",
-                "period": 300,
-                "stat": "Average"
+          ],
+          [
+            "...",
+            "${EC2AutoScalingGroupNameWorker}",
+            {
+              "region": "${AWS::Region}"
             }
+          ]
+        ],
+        "view": "timeSeries",
+        "stacked": false,
+        "region": "${AWS::Region}",
+        "title": "Credit Usage",
+        "period": 300,
+        "stat": "Average"
+      }
+    },
+    {
+      "type": "metric",
+      "x": 12,
+      "y": 6,
+      "width": 12,
+      "height": 6,
+      "properties": {
+        "metrics": [
+          [
+            "AWS/EC2",
+            "CPUCreditBalance",
+            "AutoScalingGroupName",
+            "${EC2AutoScalingGroupNameWebserver}",
+            {
+              "region": "${AWS::Region}"
+            }
+          ],
+          [
+            "...",
+            "${EC2AutoScalingGroupName}",
+            {
+              "region": "${AWS::Region}"
+            }
+          ],
+          [
+            "...",
+            "${EC2AutoScalingGroupNameWorker}",
+            {
+              "region": "${AWS::Region}"
+            }
+          ]
+        ],
+        "view": "timeSeries",
+        "stacked": false,
+        "region": "${AWS::Region}",
+        "title": "Credit Balance",
+        "period": 300,
+        "stat": "Minimum"
+      }
+    },
+    {
+      "type": "metric",
+      "x": 0,
+      "y": 12,
+      "width": 12,
+      "height": 6,
+      "properties": {
+        "metrics": [
+          [
+            "Turbine",
+            "ClusterLoad",
+            "StackName",
+            "${TurbineStackName}"
+          ]
+        ],
+        "view": "timeSeries",
+        "stacked": false,
+        "region": "${AWS::Region}",
+        "title": "Cluster Load ",
+        "period": 300,
+        "stat": "Average"
+      }
+    },
+    {
+      "type": "metric",
+      "x": 12,
+      "y": 12,
+      "width": 12,
+      "height": 6,
+      "stacked": false,
+      "properties": {
+        "metrics": [
+          [
+            "AWS/AutoScaling",
+            "GroupTotalInstances",
+            "AutoScalingGroupName",
+            "${EC2AutoScalingGroupNameWebserver}"
+          ],
+          [
+            "...",
+            "${EC2AutoScalingGroupName}"
+          ],
+          [
+            "...",
+            "${EC2AutoScalingGroupNameWorker}"
+          ]
+        ],
+        "view": "timeSeries",
+        "region": "${AWS::Region}",
+        "title": "Number of EC2 instances per AutoScaling group",
+        "period": 300,
+        "stat": "Maximum"
+      }
+    },
+    {
+      "type": "text",
+      "x": 0,
+      "y": 18,
+      "width": 24,
+      "height": 1,
+      "properties": {
+        "markdown": "# Instance dashboards"
+      }
+    },
+    {
+      "type": "metric",
+      "x": 0,
+      "y": 19,
+      "width": 8,
+      "height": 6,
+      "properties": {
+        "metrics": [
+          [
+            {
+              "expression": "SEARCH(' Namespace=\"Deductive/AutoScalingGroup/Instance\" AutoScalingGroup=\"${EC2AutoScalingGroupNameWebserver}\" MetricName=\"MemFree\" ', 'Minimum', 300)",
+              "id": "e1",
+              "label": "MemFree",
+              "region": "eu-west-1"
+            }
+          ]
+        ],
+        "view": "timeSeries",
+        "stacked": false,
+        "region": "${AWS::Region}",
+        "title": "Webserver Memory Remaining (Bytes)",
+        "period": 300,
+        "yAxis": {
+          "left": {
+            "min": 0
+          }
         }
-    ]
+      }
+    },
+    {
+      "type": "metric",
+      "x": 8,
+      "y": 19,
+      "width": 8,
+      "height": 6,
+      "properties": {
+        "metrics": [
+          [
+            {
+              "expression": "SEARCH(' Namespace=\"Deductive/AutoScalingGroup/Instance\" AutoScalingGroup=\"${EC2AutoScalingGroupNameWebserver}\" MetricName=\"DiskFree\" ', 'Minimum', 300)",
+              "id": "e1",
+              "label": "DiskFree",
+              "region": "eu-west-1"
+            }
+          ]
+        ],
+        "view": "timeSeries",
+        "stacked": false,
+        "region": "${AWS::Region}",
+        "title": "Webserver Disk Remaining (Bytes)",
+        "period": 300,
+        "yAxis": {
+          "left": {
+            "min": 0
+          }
+        }
+      }
+    },
+    {
+      "type": "metric",
+      "x": 16,
+      "y": 19,
+      "width": 8,
+      "height": 6,
+      "properties": {
+        "metrics": [
+          [
+            {
+              "expression": "SEARCH(' Namespace=\"Deductive/AutoScalingGroup/Instance\" AutoScalingGroup=\"${EC2AutoScalingGroupNameWebserver}\" MetricName=\"CPUUsage\" ', 'Minimum', 300)",
+              "id": "e1",
+              "label": "CPUUsage",
+              "region": "eu-west-1"
+            }
+          ]
+        ],
+        "view": "timeSeries",
+        "stacked": false,
+        "region": "${AWS::Region}",
+        "title": "Webserver CPU Usage (%)",
+        "period": 300,
+        "yAxis": {
+          "left": {
+            "min": 0
+          }
+        }
+      }
+    },
+    {
+      "type": "metric",
+      "x": 0,
+      "y": 25,
+      "width": 8,
+      "height": 6,
+      "properties": {
+        "metrics": [
+          [
+            {
+              "expression": "SEARCH(' Namespace=\"Deductive/AutoScalingGroup/Instance\" AutoScalingGroup=\"${EC2AutoScalingGroupName}\" MetricName=\"MemFree\" ', 'Minimum', 300)",
+              "id": "e1",
+              "label": "MemFree",
+              "region": "eu-west-1"
+            }
+          ]
+        ],
+        "view": "timeSeries",
+        "stacked": false,
+        "region": "${AWS::Region}",
+        "title": "Scheduler Memory Remaining (Bytes)",
+        "period": 300,
+        "yAxis": {
+          "left": {
+            "min": 0
+          }
+        }
+      }
+    },
+    {
+      "type": "metric",
+      "x": 8,
+      "y": 25,
+      "width": 8,
+      "height": 6,
+      "properties": {
+        "metrics": [
+          [
+            {
+              "expression": "SEARCH(' Namespace=\"Deductive/AutoScalingGroup/Instance\" AutoScalingGroup=\"${EC2AutoScalingGroupName}\" MetricName=\"DiskFree\" ', 'Minimum', 300)",
+              "id": "e1",
+              "label": "DiskFree",
+              "region": "eu-west-1"
+            }
+          ]
+        ],
+        "view": "timeSeries",
+        "stacked": false,
+        "region": "${AWS::Region}",
+        "title": "Scheduler Disk Remaining (Bytes)",
+        "period": 300,
+        "yAxis": {
+          "left": {
+            "min": 0
+          }
+        }
+      }
+    },
+    {
+      "type": "metric",
+      "x": 16,
+      "y": 25,
+      "width": 8,
+      "height": 6,
+      "properties": {
+        "metrics": [
+          [
+            {
+              "expression": "SEARCH(' Namespace=\"Deductive/AutoScalingGroup/Instance\" AutoScalingGroup=\"${EC2AutoScalingGroupName}\" MetricName=\"CPUUsage\" ', 'Minimum', 300)",
+              "id": "e1",
+              "label": "CPUUsage",
+              "region": "eu-west-1"
+            }
+          ]
+        ],
+        "view": "timeSeries",
+        "stacked": false,
+        "region": "${AWS::Region}",
+        "title": "Scheduler CPU Usage (%)",
+        "period": 300,
+        "yAxis": {
+          "left": {
+            "min": 0
+          }
+        }
+      }
+    },
+    {
+      "type": "metric",
+      "x": 0,
+      "y": 31,
+      "width": 8,
+      "height": 6,
+      "properties": {
+        "metrics": [
+          [
+            {
+              "expression": "SEARCH(' Namespace=\"Deductive/AutoScalingGroup/Instance\" AutoScalingGroup=\"${EC2AutoScalingGroupNameWorker}\" MetricName=\"MemFree\" ', 'Minimum', 300)",
+              "id": "e1",
+              "label": "MemFree",
+              "region": "eu-west-1"
+            }
+          ]
+        ],
+        "view": "timeSeries",
+        "stacked": false,
+        "region": "${AWS::Region}",
+        "title": "Worker Memory Remaining (Bytes)",
+        "period": 300,
+        "yAxis": {
+          "left": {
+            "min": 0
+          }
+        }
+      }
+    },
+    {
+      "type": "metric",
+      "x": 8,
+      "y": 31,
+      "width": 8,
+      "height": 6,
+      "properties": {
+        "metrics": [
+          [
+            {
+              "expression": "SEARCH(' Namespace=\"Deductive/AutoScalingGroup/Instance\" AutoScalingGroup=\"${EC2AutoScalingGroupNameWorker}\" MetricName=\"DiskFree\" ', 'Minimum', 300)",
+              "id": "e1",
+              "label": "DiskFree",
+              "region": "eu-west-1"
+            }
+          ]
+        ],
+        "view": "timeSeries",
+        "stacked": false,
+        "region": "${AWS::Region}",
+        "title": "Worker Disk Remaining (Bytes)",
+        "period": 300,
+        "yAxis": {
+          "left": {
+            "min": 0
+          }
+        }
+      }
+    },
+    {
+      "type": "metric",
+      "x": 16,
+      "y": 31,
+      "width": 8,
+      "height": 6,
+      "properties": {
+        "metrics": [
+          [
+            {
+              "expression": "SEARCH(' Namespace=\"Deductive/AutoScalingGroup/Instance\" AutoScalingGroup=\"${EC2AutoScalingGroupNameWorker}\" MetricName=\"CPUUsage\" ', 'Minimum', 300)",
+              "id": "e1",
+              "label": "CPUUsage",
+              "region": "eu-west-1"
+            }
+          ]
+        ],
+        "view": "timeSeries",
+        "stacked": false,
+        "region": "${AWS::Region}",
+        "title": "Worker CPU Usage (%)",
+        "period": 300,
+        "yAxis": {
+          "left": {
+            "min": 0
+          }
+        }
+      }
+    }
+  ]
 }

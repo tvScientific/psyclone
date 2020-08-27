@@ -200,10 +200,6 @@ Resources:
             --region ${AWS::Region} \
             --stack ${AWS::StackName} \
             --resource LaunchConfiguration
-          /opt/aws/bin/cfn-signal -e $?
-            --region ${AWS::Region} \
-            --stack ${AWS::StackName} \
-            --resource LaunchConfiguration
     Metadata:
       AWS::CloudFormation::Init:
         config:

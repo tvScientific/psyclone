@@ -91,6 +91,13 @@ mkdir "$AIRFLOW_HOME" && chown -R ec2-user: "$AIRFLOW_HOME"
 
 systemctl enable --now cfn-hup.service
 
+# add this to script
+export PATH=/usr/local/bin:$PATH
+yum -y --security update
+yum -y install jq
+yum -y install awslogs
+yum -y install aws-cli
+
 cd_agent() {
     yum install -y ruby
     wget "https://aws-codedeploy-$AWS_REGION.s3.amazonaws.com/latest/install"

@@ -84,22 +84,113 @@ class UpdateTemplates:
             {'TurbineStackName': {'Value': {'Fn::GetAtt': ['WorkerSetStack', 'Outputs.TurbineStackName']}}}
         )
         self.templates_dict['cluster']['Outputs'].update(
-            {'EC2AutoScalingGroupName': {'Value': {'Fn::GetAtt': ['SchedulerStack', 'Outputs.EC2AutoScalingGroupName']}}}
+            {'EC2AutoScalingGroupName': {
+                'Value': {'Fn::GetAtt': ['SchedulerStack', 'Outputs.EC2AutoScalingGroupName']}}}
         )
         self.templates_dict['cluster']['Outputs'].update(
-            {'EC2AutoScalingGroupNameWebserver': {'Value': {'Fn::GetAtt': ['WebserverStack', 'Outputs.EC2AutoScalingGroupName']}}}
+            {'EC2AutoScalingGroupNameWebserver': {
+                'Value': {'Fn::GetAtt': ['WebserverStack', 'Outputs.EC2AutoScalingGroupName']}}}
         )
         self.templates_dict['cluster']['Outputs'].update(
-            {'EC2AutoScalingGroupNameWorker': {'Value': {'Fn::GetAtt': ['WorkerSetStack', 'Outputs.EC2AutoScalingGroupName']}}}
+            {'EC2AutoScalingGroupNameWorker': {
+                'Value': {'Fn::GetAtt': ['WorkerSetStack', 'Outputs.EC2AutoScalingGroupName']}}}
         )
 
         return {
             'SQSTaskQueueName': {"Fn::GetAtt": ["TurbineCluster", "Outputs.SQSTaskQueueName"]},
             'TurbineStackName': {"Fn::GetAtt": ["TurbineCluster", "Outputs.TurbineStackName"]},
             'EC2AutoScalingGroupName': {"Fn::GetAtt": ["TurbineCluster", "Outputs.EC2AutoScalingGroupName"]},
-            'EC2AutoScalingGroupNameWebserver': {"Fn::GetAtt": ["TurbineCluster", "Outputs.EC2AutoScalingGroupNameWebserver"]},
-            'EC2AutoScalingGroupNameWorker': {"Fn::GetAtt": ["TurbineCluster", "Outputs.EC2AutoScalingGroupNameWorker"]},
+            'EC2AutoScalingGroupNameWebserver': {
+                "Fn::GetAtt": ["TurbineCluster", "Outputs.EC2AutoScalingGroupNameWebserver"]},
+            'EC2AutoScalingGroupNameWorker': {
+                "Fn::GetAtt": ["TurbineCluster", "Outputs.EC2AutoScalingGroupNameWorker"]},
         }
+
+    def add_instance_and_autoscaling_group_metrics(self):
+
+        """"""
+        metrics_userdata = [
+            # add to this to userdata
+            "aws configure set default.region ${AWS::Region}\n",
+            "cat <<EOF > /usr/local/bin/metricscript.sh\n",
+            "# !/bin/bash\n",
+            "\n",
+            "# Collect region and instanceid from metadata\n",
+            "AWSREGION=\$(curl -ss http://169.254.169.254/latest/dynamic/instance-identity/document | jq -r .region)\n",
+            "AWSINSTANCEID=\$(curl -ss http://169.254.169.254/latest/meta-data/instance-id)\n",
+            "AWSAUTOSCALINGGROUP=\$(aws autoscaling describe-auto-scaling-instances --instance-ids=\$AWSINSTANCEID --region  \$AWSREGION | jq .AutoScalingInstances[0].AutoScalingGroupName)\n",
+            "\n",
+            "\n",
+            "function getMetric {\n",
+            "  # Always return bytes\n",
+            "  if [ \"\$1\" == \"DiskTotal\" ]; then\n",
+            "    total=\$(df / | awk '/dev/ {print \$2}')\n",
+            "    echo \$(( \$total*1000 ))\n",
+            "  elif [ \"\$1\" == \"DiskUsed\" ]; then\n",
+            "    used=\$(df / | awk '/dev/ {print \$3}')\n",
+            "    echo \$(( \$used*1000 ))\n",
+            "  elif [ \"\$1\" == \"DiskFree\" ]; then\n",
+            "    free=\$(df / | awk '/dev/ {print \$4}')\n",
+            "    echo \$(( \$free*1000 ))\n",
+            "  elif [ \"\$1\" == \"MemTotal\" ]; then\n",
+            "    free -b | awk '/Mem:/ {print \$2}'\n",
+            "  elif [ \"\$1\" == \"MemUsed\" ]; then\n",
+            "    used=\$(free -b | awk '/Mem:/ {print \$3}')\n",
+            "    shared=\$(free -b | awk '/Mem:/ {print \$5}')\n",
+            "    buff=\$(free -b | awk '/Mem:/ {print \$6}')\n",
+            "    echo \$((\$used + \$shared + \$buff))\n",
+            "  elif [ \"\$1\" == \"MemFree\" ]; then\n",
+            "    free -b | awk '/Mem:/ {print \$4}'\n",
+            "  elif [ \"\$1\" == \"CPUUsage\" ]; then\n",
+            "    grep 'cpu ' /proc/stat | awk '{usage=(\$2+\$4)*100/(\$2+\$4+\$5)} END {print usage}'\n ",
+            "  fi\n",
+            "}\n",
+            "\n",
+            "# Disk usage metrics\n",
+            # "data=\$( getMetric DiskTotal )\n",
+            # "aws cloudwatch put-metric-data --value \$data --namespace Deductive/AutoScalingGroup/Instance --unit Bytes --metric-name DiskTotal --dimensions AutoScalingGroup=\$AWSAUTOSCALINGGROUP,Instance=\$AWSINSTANCEID --region  \$AWSREGION\n",
+            # "data=\$( getMetric DiskUsed )\n",
+            # "aws cloudwatch put-metric-data --value \$data --namespace Deductive/AutoScalingGroup/Instance --unit Bytes --metric-name DiskUsed --dimensions AutoScalingGroup=\$AWSAUTOSCALINGGROUP,Instance=\$AWSINSTANCEID --region  \$AWSREGION\n",
+            "data=\$( getMetric DiskFree )\n",
+            "aws cloudwatch put-metric-data --value \$data --namespace Deductive/AutoScalingGroup/Instance --unit Bytes --metric-name DiskFree --dimensions AutoScalingGroup=\$AWSAUTOSCALINGGROUP,Instance=\$AWSINSTANCEID --region  \$AWSREGION\n",
+            "# Memory usage metrics\n",
+            # "data=\$( getMetric MemTotal )\n",
+            # "aws cloudwatch put-metric-data --value \$data --namespace Deductive/AutoScalingGroup/Instance --unit Bytes --metric-name MemTotal --dimensions AutoScalingGroup=\$AWSAUTOSCALINGGROUP,Instance=\$AWSINSTANCEID --region  \$AWSREGION\n",
+            # "data=\$( getMetric MemUsed )\n",
+            # "aws cloudwatch put-metric-data --value \$data --namespace Deductive/AutoScalingGroup/Instance --unit Bytes --metric-name MemUsed --dimensions AutoScalingGroup=\$AWSAUTOSCALINGGROUP,Instance=\$AWSINSTANCEID --region  \$AWSREGION\n",
+            "data=\$( getMetric MemFree )\n",
+            "aws cloudwatch put-metric-data --value \$data --namespace Deductive/AutoScalingGroup/Instance --unit Bytes --metric-name MemFree --dimensions AutoScalingGroup=\$AWSAUTOSCALINGGROUP,Instance=\$AWSINSTANCEID --region  \$AWSREGION\n",
+            "# CPU usage metrics\n",
+            "data=\$( getMetric CPUUsage )\n",
+            "aws cloudwatch put-metric-data --value \$data --namespace Deductive/AutoScalingGroup/Instance --unit Bytes --metric-name CPUUsage --dimensions AutoScalingGroup=\$AWSAUTOSCALINGGROUP,Instance=\$AWSINSTANCEID --region  \$AWSREGION\n",
+            "EOF\n",
+            "\n",
+            "chmod +x /usr/local/bin/metricscript.sh\n",
+            "\n",
+            "cat <<EOF > /etc/cron.d/autoscalinggroupmetrics\n",
+            "*/5 * * * * root /usr/local/bin/metricscript.sh\n",
+            "EOF\n",
+            "\n",
+            "# Test metrics script\n",
+            "/usr/local/bin/metricscript.sh\n",
+            "\n",
+            """
+          /opt/aws/bin/cfn-signal -e $?
+            --region ${AWS::Region} \
+            --stack ${AWS::StackName} \
+            --resource LaunchConfiguration"""
+        ]
+
+        def join_to_userdata(cluster):
+            """ add userdata to turbine cluster"""
+            existing_userdata = cluster['Resources']['LaunchConfiguration']['Properties']['UserData']['Fn::Base64'][
+                'Fn::Sub']
+            cluster['Resources']['LaunchConfiguration']['Properties']['UserData']['Fn::Base64']['Fn::Sub'] = "".join(
+                [existing_userdata, *metrics_userdata])
+
+        join_to_userdata(self.templates_dict['workerset'])
+        join_to_userdata(self.templates_dict['webserver'])
+        join_to_userdata(self.templates_dict['scheduler'])
 
     def save_templates(self):
         for template_name in self.templates_dict.keys():
@@ -107,10 +198,11 @@ class UpdateTemplates:
                                    "turbine-{}.template".format(template_name)), 'w') as outfile:
                 outfile.write(dump_yaml(self.templates_dict[template_name]))
 
-    def add_policies(self):
+    def add_policies(self, policy_path=""):
 
         for template_name in self.templates_dict.keys():
-            policies_list = glob.glob(os.path.join(self.policies_base_path, template_name, '*.json'))
+            policies_list = glob.glob(
+                os.path.join(policy_path or self.policies_base_path, template_name, '*.json'))
 
             if policies_list:
                 for policy_path in policies_list:
@@ -129,9 +221,8 @@ class UpdateTemplates:
                         self.templates_dict[template_name]['Resources']['IamRole']['Properties']['Policies'].append(
                             new_policy)
 
-            managed_policies = glob.glob(os.path.join(
-                self.policies_base_path, template_name, 'managed_policies.txt'
-            ))
+            managed_policies = glob.glob(
+                os.path.join(policy_path or self.policies_base_path, template_name, 'managed_policies.txt'))
             if managed_policies:
                 with open(managed_policies[0]) as m_policies:
                     arn_list = m_policies.read().splitlines()
@@ -207,6 +298,9 @@ class UpdateTemplates:
         :return: path to dashboard template file as str and the parameters needed as a dict
         """
         outputs = self._add_outputs_for_dashboards()
+        self.add_instance_and_autoscaling_group_metrics()
+        dashboard_policies_path = os.path.join(os.path.dirname(os.path.realpath(__file__)), "dashboards", "policies")
+        self.add_policies(dashboard_policies_path)
         dashboard = DativaDashboardTemplate(
             project_name,
             stage_name=stage_name,

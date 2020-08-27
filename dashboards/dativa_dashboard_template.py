@@ -167,14 +167,6 @@ class DativaDashboardTemplate:
 
         str_dashboard = json.dumps(dashboard_source)
         logger.info("Replacing values with custom delimiters in Python...")
-        # # Avoids issues with trying to parse out the format variables from string JSON, which has lots of { and } from
-        # # Python string format parsing
-        # for key, val in kwargs.items():
-        #     str_dashboard = str_dashboard.replace("<" + key + ">", val)
-        #     logger.info("Replacing {} with {}".format("<" + key + ">", val))
-        # logger.info("Replacing {} with {}".format("<UniqueDashboard>", str(self.unique_dashboard)))
-        # str_dashboard = str_dashboard.replace("<UniqueDashboard>", str(self.unique_dashboard))
-        # logger.info("Finished, creating dashboard template")
 
         t.add_resource(Dashboard(
             self._project + "Dashboard",

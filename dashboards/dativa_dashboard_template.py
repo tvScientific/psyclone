@@ -36,7 +36,8 @@ import string
 
 from troposphere import Ref, Template, Join, Parameter, Sub
 from troposphere import constants
-from troposphere.cloudwatch import Dashboard
+from troposphere import cloudwatch
+from troposphere import sns
 
 """
 Initialise logger
@@ -65,6 +66,7 @@ class DativaDashboardTemplate:
         self._file_ext = 'json'
         self._file_ext_output = 'template'
         self._stage_name = stage_name
+        self._stage_name_alphanum = stage_name.title().replace("_", "").replace("-", "")
         self._template_path = template_path
         source_file_unique = "{}/dashboard-{}.{}".format(source_path, self._stage_name, self._file_ext)
         source_file_template = "{}/dashboard-template.{}".format(source_path, self._file_ext)
@@ -168,7 +170,7 @@ class DativaDashboardTemplate:
         str_dashboard = json.dumps(dashboard_source)
         logger.info("Replacing values with custom delimiters in Python...")
 
-        t.add_resource(Dashboard(
+        t.add_resource(cloudwatch.Dashboard(
             self._project + "Dashboard",
             DashboardName=Join("-", [
                 self._dash_project,
@@ -179,14 +181,64 @@ class DativaDashboardTemplate:
             ]),
             DashboardBody=Sub(str_dashboard)
         ))
-        """
-        Deploy Dashboard
-        """
 
-        """
-        Create the template
-        """
+        self.add_instance_count_alarms(t)
+
         return self._save_template(template_name, t.to_yaml())
+
+    def add_instance_count_alarms(self, t):
+        """ adds alarms in place to template and an sns topic for the alarm"""
+
+        # Add SNS topic to alert in case of failure
+        sns_alarm_resource = "{}PsycloneCloudWatchAlarmTopic".format(self._stage_name_alphanum)
+        sns_alarm_topic_name = Join("-", [sns_alarm_resource, Ref("DeploymentStage")])
+        t.add_resource(sns.Topic(sns_alarm_resource, DisplayName=sns_alarm_topic_name, TopicName=sns_alarm_topic_name))
+
+        # Add alarms, define shared properties first
+        period_mins = 1     # Smallest period that is supported by chosen AWS metric
+        range_low = 1
+        alarm_properties = dict(
+            Period=period_mins * 60,
+            Statistic="Minimum",
+            AlarmActions=[Ref(sns_alarm_resource)],
+            # OKActions=[Ref(sns_alarm_resource)],
+            EvaluationPeriods="1",
+            Namespace="AWS/AutoScaling",
+            MetricName="GroupTotalInstances",
+            TreatMissingData="breaching",
+            ComparisonOperator="LessThanThreshold",
+            Threshold=range_low,
+        )
+
+        metric_dim_webserver = cloudwatch.MetricDimension(
+            Name="AutoScalingGroupName",
+            Value=Ref("EC2AutoScalingGroupNameWebserver")
+        )
+        alarm_name_no_webserver = "{}NoPsycloneWebserverInstances".format(self._stage_name_alphanum)
+        t.add_resource(
+            cloudwatch.Alarm(
+                alarm_name_no_webserver,
+                AlarmName=Join("-", [alarm_name_no_webserver, Ref("DeploymentStage")]),
+                AlarmDescription="No psyclone webserver instances for {}".format(self._stage_name),
+                Dimensions=[metric_dim_webserver],
+                **alarm_properties
+            )
+        )
+        metric_dim_scheduler = cloudwatch.MetricDimension(
+            Name="AutoScalingGroupName",
+            Value=Ref("EC2AutoScalingGroupName")
+        )
+        alarm_name_no_scheduler = "{}NoPsycloneSchedulerInstances".format(self._stage_name_alphanum)
+        t.add_resource(
+            cloudwatch.Alarm(
+                alarm_name_no_scheduler,
+                AlarmName=Join("-", [alarm_name_no_scheduler, Ref("DeploymentStage")]),
+                AlarmDescription="No psyclone scheduler instances for {}".format(self._stage_name),
+                Dimensions=[metric_dim_scheduler],
+                **alarm_properties
+            )
+        )
+        # return t
 
     def _find_dashboard_bottom(self, dashboard_source):
 

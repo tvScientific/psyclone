@@ -198,11 +198,11 @@ class UpdateTemplates:
                                    "turbine-{}.template".format(template_name)), 'w') as outfile:
                 outfile.write(dump_yaml(self.templates_dict[template_name]))
 
-    def add_policies(self, policy_path=""):
+    def add_policies(self, policies_base_path=""):
 
         for template_name in self.templates_dict.keys():
             policies_list = glob.glob(
-                os.path.join(policy_path or self.policies_base_path, template_name, '*.json'))
+                os.path.join(policies_base_path or self.policies_base_path, template_name, '*.json'))
 
             if policies_list:
                 for policy_path in policies_list:
@@ -222,7 +222,7 @@ class UpdateTemplates:
                             new_policy)
 
             managed_policies = glob.glob(
-                os.path.join(policy_path or self.policies_base_path, template_name, 'managed_policies.txt'))
+                os.path.join(policies_base_path or self.policies_base_path, template_name, 'managed_policies.txt'))
             if managed_policies:
                 with open(managed_policies[0]) as m_policies:
                     arn_list = m_policies.read().splitlines()

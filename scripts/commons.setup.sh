@@ -20,6 +20,9 @@ AWS_ACCOUNT_ID=$(jsonvar "$EC2_DOCUMENT" accountId)
 EC2_INSTANCE_ID=$(jsonvar "$EC2_DOCUMENT" instanceId)
 export AWS_DEFAULT_REGION AWS_REGION AWS_ACCOUNT_ID EC2_INSTANCE_ID
 
+AUTO_SCALING_GROUP_NAME=$(aws cloudformation describe-stacks --stack-name "${AWS_STACK_NAME}" | jq '.Stacks[].Outputs[] | select(.OutputKey|test("AutoScalingGroupName")) | .OutputValue')
+export AUTO_SCALING_GROUP_NAME
+
 yum install -y python3 python3-pip python3-wheel python3-devel
 pip3 install awscurl
 EC2_HOST_IDENTIFIER="arn:$AWS_PARTITION:ec2:$AWS_REGION:$AWS_ACCOUNT_ID"
@@ -104,4 +107,5 @@ cd_agent() {
     chmod +x ./install
     ./install auto
 }
+
 

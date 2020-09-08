@@ -13,10 +13,11 @@ def handler(_event, _context):
 
     timestamp = datetime.datetime.now(datetime.timezone.utc)
     timestamp = timestamp - datetime.timedelta(
-        minutes=timestamp.minute % 5 + 10,
+        minutes=timestamp.minute % 1 + 2,
         seconds=timestamp.second,
         microseconds=timestamp.microsecond,
     )
+    print(timestamp)
     logging.info("evaluating at [%s]", timestamp)
 
     metrics = get_metrics(timestamp)
@@ -28,7 +29,7 @@ def handler(_event, _context):
     logging.info("ANOMV=%s NOER=%s GISI=%s", messages, requests, machines)
 
     if machines > 0:
-        load = 1.0 - requests / (machines * 0.098444 * 300)
+        load = 1.0 - requests / (machines * 0.098444 * 60)
     elif messages > 0:
         load = 1.0
     else:
@@ -43,7 +44,7 @@ def get_metrics(timestamp):
     group = os.environ["GroupName"]
     response = CW.get_metric_data(
         StartTime=timestamp,
-        EndTime=timestamp + datetime.timedelta(minutes=5),
+        EndTime=timestamp + datetime.timedelta(minutes=1),
         ScanBy="TimestampAscending",
         MetricDataQueries=[
             {
@@ -54,7 +55,7 @@ def get_metrics(timestamp):
                         "MetricName": "ApproximateNumberOfMessagesVisible",
                         "Dimensions": [{"Name": "QueueName", "Value": f"{queue}"}],
                     },
-                    "Period": 300,
+                    "Period": 60,
                     "Stat": "Maximum",
                     "Unit": "Count",
                 },
@@ -67,7 +68,7 @@ def get_metrics(timestamp):
                         "MetricName": "NumberOfEmptyReceives",
                         "Dimensions": [{"Name": "QueueName", "Value": f"{queue}"}],
                     },
-                    "Period": 300,
+                    "Period": 60,
                     "Stat": "Sum",
                     "Unit": "Count",
                 },
@@ -82,7 +83,7 @@ def get_metrics(timestamp):
                             {"Name": "AutoScalingGroupName", "Value": f"{group}"}
                         ],
                     },
-                    "Period": 300,
+                    "Period": 60,
                     "Stat": "Average",
                     "Unit": "None",
                 },

@@ -11,7 +11,6 @@ TERMINATING=$(aws autoscaling describe-scaling-activities \
     | test($TERMINATE_MESSAGE)) != []')
 
 if [ "$TERMINATING" = "true" ]; then
-    sudo systemctl start airflow-heartbeat.timer
     systemctl stop airflow-workerset
     aws autoscaling complete-lifecycle-action \
     --instance-id "$(ec2-metadata -i | awk '{print $2}')" \

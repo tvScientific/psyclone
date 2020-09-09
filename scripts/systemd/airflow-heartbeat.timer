@@ -3,3 +3,6 @@ BindsTo=airflow-workerset.service
 
 [Timer]
 OnCalendar=*:0/1
+
+[Install]
+RequiredBy=airflow-workerset.service

@@ -13,11 +13,11 @@ def handler(_event, _context):
 
     timestamp = datetime.datetime.now(datetime.timezone.utc)
     timestamp = timestamp - datetime.timedelta(
-        minutes=timestamp.minute % 1 + 2,
+        minutes=2,
         seconds=timestamp.second,
         microseconds=timestamp.microsecond,
     )
-    print(timestamp)
+
     logging.info("evaluating at [%s]", timestamp)
 
     metrics = get_metrics(timestamp)

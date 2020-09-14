@@ -20,6 +20,7 @@ def handler(_event, _context):
         seconds=timestamp.second,
         microseconds=timestamp.microsecond,
     )
+    # We jump 2 minutes back because that's how far behind the aws metrics we're accessing are
 
     logging.info("evaluating at [%s]", timestamp)
 

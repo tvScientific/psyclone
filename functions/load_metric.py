@@ -9,6 +9,9 @@ logging.getLogger().setLevel(os.environ.get("LOGLEVEL", logging.INFO))
 
 
 def handler(_event, _context):
+    """
+    https://github.com/villasv/aws-airflow-stack/wiki/Cluster-Load-Metric-Rationale
+    """
     logging.debug("environment variables:\n %s", os.environ)
 
     timestamp = datetime.datetime.now(datetime.timezone.utc)
@@ -27,10 +30,13 @@ def handler(_event, _context):
     requests = metrics["sumNOER"]
     machines = metrics["avgGISI"]
     logging.info("ANOMV=%s NOER=%s GISI=%s", messages, requests, machines)
-    ec2_q_polling_freq = 0.098444
+    average_polling_freq_per_minute = 5.5
+    """ average_polling_freq_per_minute is determined by observing the aws sqs metric of empty receives it is currently
+    5 or 6 per minute so we take an average of 5.5
+    """
 
     if machines > 0:
-        load = 1.0 - requests / (machines * ec2_q_polling_freq * 60)
+        load = 1.0 - requests / (machines * average_polling_freq_per_minute)
     elif messages > 0:
         load = 1.0
     else:

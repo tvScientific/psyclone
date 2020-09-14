@@ -27,9 +27,10 @@ def handler(_event, _context):
     requests = metrics["sumNOER"]
     machines = metrics["avgGISI"]
     logging.info("ANOMV=%s NOER=%s GISI=%s", messages, requests, machines)
+    ec2_q_polling_freq = 0.098444
 
     if machines > 0:
-        load = 1.0 - requests / (machines * 0.098444 * 60)
+        load = 1.0 - requests / (machines * ec2_q_polling_freq * 60)
     elif messages > 0:
         load = 1.0
     else:

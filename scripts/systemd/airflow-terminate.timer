@@ -2,4 +2,4 @@
 OnCalendar=*:0/1
 
 [Install]
-WantedBy=airflow.service
+RequiredBy=airflow-workerset.service

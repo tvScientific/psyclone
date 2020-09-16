@@ -9,14 +9,19 @@ logging.getLogger().setLevel(os.environ.get("LOGLEVEL", logging.INFO))
 
 
 def handler(_event, _context):
+    """
+    https://github.com/villasv/aws-airflow-stack/wiki/Cluster-Load-Metric-Rationale
+    """
     logging.debug("environment variables:\n %s", os.environ)
 
     timestamp = datetime.datetime.now(datetime.timezone.utc)
     timestamp = timestamp - datetime.timedelta(
-        minutes=timestamp.minute % 5 + 10,
+        minutes=2,
         seconds=timestamp.second,
         microseconds=timestamp.microsecond,
     )
+    # We jump 2 minutes back because that's how far behind the aws metrics we're accessing are
+
     logging.info("evaluating at [%s]", timestamp)
 
     metrics = get_metrics(timestamp)
@@ -26,9 +31,13 @@ def handler(_event, _context):
     requests = metrics["sumNOER"]
     machines = metrics["avgGISI"]
     logging.info("ANOMV=%s NOER=%s GISI=%s", messages, requests, machines)
+    average_polling_freq_per_minute = 5.5
+    """ average_polling_freq_per_minute is determined by observing the aws sqs metric of empty receives it is currently
+    5 or 6 per minute so we take an average of 5.5
+    """
 
     if machines > 0:
-        load = 1.0 - requests / (machines * 0.098444 * 300)
+        load = 1.0 - requests / (machines * average_polling_freq_per_minute)
     elif messages > 0:
         load = 1.0
     else:
@@ -43,7 +52,7 @@ def get_metrics(timestamp):
     group = os.environ["GroupName"]
     response = CW.get_metric_data(
         StartTime=timestamp,
-        EndTime=timestamp + datetime.timedelta(minutes=5),
+        EndTime=timestamp + datetime.timedelta(minutes=1),
         ScanBy="TimestampAscending",
         MetricDataQueries=[
             {
@@ -54,7 +63,7 @@ def get_metrics(timestamp):
                         "MetricName": "ApproximateNumberOfMessagesVisible",
                         "Dimensions": [{"Name": "QueueName", "Value": f"{queue}"}],
                     },
-                    "Period": 300,
+                    "Period": 60,
                     "Stat": "Maximum",
                     "Unit": "Count",
                 },
@@ -67,7 +76,7 @@ def get_metrics(timestamp):
                         "MetricName": "NumberOfEmptyReceives",
                         "Dimensions": [{"Name": "QueueName", "Value": f"{queue}"}],
                     },
-                    "Period": 300,
+                    "Period": 60,
                     "Stat": "Sum",
                     "Unit": "Count",
                 },
@@ -82,7 +91,7 @@ def get_metrics(timestamp):
                             {"Name": "AutoScalingGroupName", "Value": f"{group}"}
                         ],
                     },
-                    "Period": 300,
+                    "Period": 60,
                     "Stat": "Average",
                     "Unit": "None",
                 },

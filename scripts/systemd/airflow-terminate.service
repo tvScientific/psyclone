@@ -1,3 +1,4 @@
 [Service]
+EnvironmentFile=/etc/sysconfig/airflow.env
 Type=oneshot
 ExecStart=/opt/turbine/airflow-terminate.sh

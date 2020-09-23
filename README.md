@@ -41,6 +41,62 @@ LoadExampleDags
 LoadDefaultCons
 WebServerPort
 
+### Authentication and creating users
+
+Password authentication is enabled for the airflow webserver. When a stack is deployed, 
+no users are initialised alongside it. Adding the initial user requires you to use SSM 
+to access the webserver, you must then set up a connection to the user database and use 
+the airflow python interface. 
+
+To connect to the airflow webserver, go to EC2 console and find the appropriate webserver 
+for the desired stack. Select it and click on `Connect` then choose `Session Manager` 
+as your connection method, click on connect and you will be taken to a terminal view in 
+the EC2. You can now set up environment used by airflow , this is done by finding a file
+on the EC2 which contains the required environment variables and exporting them in 
+the current session.
+  
+DO NOT EDIT THE CONTENT OF THE FILE - this would break the webserver
+```shell script
+vi /etc/sysconfig/airflow.env
+```
+Example of the file contents
+```shell script
+AWS_DEFAULT_REGION=eu-west-1
+AIRFLOW_HOME=/airflow
+AIRFLOW__CORE__EXECUTOR=CeleryExecutor
+...
+```
+Export every line in this script to an environment variable. This can be done with a command such as:
+ ```shell script
+export AWS_DEFAULT_REGION=eu-west-1
+export AIRFLOW_HOME=/airflow
+export AIRFLOW__CORE__EXECUTOR=CeleryExecutor
+...
+```
+You can then use the airflow CLI interface to add a user 
+(please use a better password, airflow does not enforce a password policy).  
+
+```shell script
+airflow create_user -u admin -e admin@example.com -f admin -l admin -p password -r Admin
+```
+
+For this change to propagate to the webserver, you will need to restart it. For that run the following script. 
+This must be run as root as the webserver is run as the root user. 
+```shell script
+sudo su
+systemctl stop airflow-webserver
+sleep 30
+systemctl start airflow-webserver
+```                           
+You can now go to the airflow link to log in with the username and password outlined above. 
+This will give you access to the airflow webserver. 
+
+If you get an 'Invalid Login' message, it may mean that not all lines from the airflow.env file were set, 
+please check and try again. If a given user is created by accident, you can delete it with the following command
+```shell script
+airflow delete_user -u username
+```
+
 ### Below this is the original turbine readme, left as is unedited
 
 <img src=".github/img/logo.png" align="right" width="25%" />

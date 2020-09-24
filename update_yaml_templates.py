@@ -47,6 +47,21 @@ class UpdateTemplates:
                     self.templates_dict["master"]["Parameters"]["WorkerInstanceType"]["Default"] = instance_type
                 else:
                     logger.info("No worker_instance_type detected")
+                if "rds_instance_type" in self.STAGE_NAMES_AND_CONFIGS[self.stage_name]:
+                    rds_instance_type = self.STAGE_NAMES_AND_CONFIGS[self.stage_name]["rds_instance_type"]
+                    logger.info("Updating templates to use {} as rds instance type from class attribute".format(
+                        rds_instance_type))
+                    self.templates_dict["cluster"]["Resources"]["DBInstance"]["DBInstanceClass"] = rds_instance_type
+                else:
+                    logger.info("No rds_instance_type detected")
+                if "max_spot_price" in self.STAGE_NAMES_AND_CONFIGS[self.stage_name]:
+                    max_spot_price = self.STAGE_NAMES_AND_CONFIGS[self.stage_name]["max_spot_price"]
+                    logger.info("Updating templates to use spot price {}".format(max_spot_price))
+                    self.templates_dict["workerset"]["Resources"]["LaunchConfiguration"]["Properties"][
+                        "SpotPrice"] = max_spot_price
+                else:
+                    logger.info('No max_spot_price not detected')
+
         return
 
     @staticmethod

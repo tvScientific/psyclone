@@ -91,7 +91,7 @@ export "${AIRFLOW_ENVS[@]}"
 
 yum install -y gcc libcurl-devel openssl-devel
 export PYCURL_SSL_LIBRARY=openssl
-pip3 install "apache-airflow[celery,postgres,s3,crypto]==1.10.10" "celery[sqs]"
+pip3 install "apache-airflow[celery,postgres,s3,crypto]==1.10.10" "celery[sqs]==4.4.7"
 mkdir "$AIRFLOW_HOME" && chown -R ec2-user: "$AIRFLOW_HOME"
 
 systemctl enable --now cfn-hup.service

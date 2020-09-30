@@ -190,7 +190,8 @@ class DativaDashboardTemplate:
         """ adds alarms in place to template and an sns topic for the alarm"""
 
         # Add SNS topic to alert in case of failure
-        sns_alarm_resource = "{}PsycloneCloudWatchAlarmTopic".format(self._stage_name_alphanum)
+        sns_alarm_resource = "{}{}PsycloneCloudWatchAlarmTopic".format(
+            self._alphanum_project, self._stage_name_alphanum)
         sns_alarm_topic_name = Join("-", [sns_alarm_resource, Ref("DeploymentStage")])
         t.add_resource(sns.Topic(sns_alarm_resource, DisplayName=sns_alarm_topic_name, TopicName=sns_alarm_topic_name))
 

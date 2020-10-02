@@ -194,6 +194,17 @@ Parameters:
     Default: quickstart-turbine-airflow/
     Type: String
 
+  SchedulerAsWorker:
+    Description: Whether to use Scheduler as a smaller worker with its own queue
+    AllowedValues:
+      - 'False'
+      - 'True'
+    Type:
+      'String'
+
+#Conditions:
+#  SchedulerAsWorkerCondition: !Equals [ !Ref SchedulerAsWorker, True ]
+
 Resources:
 
   DBSubnetGroup:
@@ -256,6 +267,10 @@ Resources:
   TaskQueue:
     Type: AWS::SQS::Queue
 
+  SmallTaskQueue:
+    Type: AWS::SQS::Queue
+#    Condition: SchedulerAsWorkerCondition
+
   LogsBucket:
     Type: AWS::S3::Bucket
 
@@ -287,6 +302,8 @@ Resources:
         SecurityGroupID: !Ref InstancesSecurityGroup
         DatabaseSecret: !Ref Secret
         QueueName: !GetAtt TaskQueue.QueueName
+#        SmallQueueName: !Fn::If: [SchedulerAsWorkerCondition, !GetAtt SmallTaskQueue.QueueName, '']
+        SmallQueueName: !GetAtt SmallTaskQueue.QueueName
         LogsBucket: !Ref LogsBucket
         InstanceType: !Ref SchedulerInstanceType
         LoadExampleDags: !Ref LoadExampleDags
@@ -312,6 +329,7 @@ Resources:
         AllowHTTPAccessCIDR: !Ref AllowHTTPAccessCIDR
         DatabaseSecret: !Ref Secret
         QueueName: !GetAtt TaskQueue.QueueName
+        SmallQueueName: !GetAtt SmallTaskQueue.QueueName
         LogsBucket: !Ref LogsBucket
         InstanceType: !Ref WebserverInstanceType
         LoadExampleDags: !Ref LoadExampleDags
@@ -337,6 +355,7 @@ Resources:
         SecurityGroupID: !Ref InstancesSecurityGroup
         DatabaseSecret: !Ref Secret
         QueueName: !GetAtt TaskQueue.QueueName
+        SmallQueueName: !GetAtt SmallTaskQueue.QueueName
         LogsBucket: !Ref LogsBucket
         InstanceType: !Ref WorkerInstanceType
         MinGroupSize: !Ref MinGroupSize

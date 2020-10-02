@@ -81,6 +81,12 @@ Parameters:
       Name of the queue to be used as message broker between the scheduler and
       worker instances.
     Type: String
+  SmallQueueName:
+    Description: >-
+      Name of the queue to be used as message broker between the scheduler and
+      worker instances for the small worker running on the scheduler.
+    Type: String
+    Default: ""
   LogsBucket:
     Description: >-
       Name of the bucket where task logs are remotely stored.
@@ -178,6 +184,7 @@ Resources:
                 export AWS_STACK_NAME="${AWS::StackName}"
                 export LOGS_BUCKET="${LogsBucket}"
                 export QUEUE_NAME="${QueueName}"
+                export SMALL_QUEUE_NAME="${SmallQueueName}"
                 export DB_SECRETS_ARN="${DatabaseSecret}"
                 export LOAD_EXAMPLES="${LoadExampleDags}"
                 export LOAD_DEFAULTS="${LoadDefaultCons}"

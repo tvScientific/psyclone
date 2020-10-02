@@ -3,8 +3,8 @@ Description=Airflow celery worker daemon to run on scheduler
 Wants=airflow-confapply-agent.path airflow-terminate.timer airflow-heartbeat.timer
 
 [Service]
-EnvironmentFile=/etc/sysconfig/airflow.env
-ExecStart=/usr/local/bin/airflow worker -q small_queue
+EnvironmentFile=/etc/sysconfig/airflow-workerset-small.env
+ExecStart=/usr/local/bin/airflow worker -q "${SMALL_QUEUE_NAME}"
 User=ec2-user
 Group=ec2-user
 Restart=on-failure

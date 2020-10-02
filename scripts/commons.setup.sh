@@ -83,8 +83,14 @@ envreplace /etc/cfn/hooks.d/cfn-auto-reloader.conf
 mkdir /run/airflow && chown -R ec2-user: /run/airflow
 cp "$FILES"/systemd/airflow-*.{path,timer,service} /lib/systemd/system/
 cp "$FILES"/systemd/airflow.env /etc/sysconfig/airflow.env
+cp "$FILES"/systemd/airflow-workerset-small.env /etc/sysconfig/airflow-workerset-small.env
 cp "$FILES"/systemd/airflow.conf /usr/lib/tmpfiles.d/airflow.conf
 envreplace /etc/sysconfig/airflow.env
+
+echo ${SMALL_QUEUE_NAME}
+
+envreplace /etc/sysconfig/airflow-workerset-small.env
+envreplace /usr/lib/systemd/system/airflow-workerset-small.service
 
 mapfile -t AIRFLOW_ENVS < /etc/sysconfig/airflow.env
 export "${AIRFLOW_ENVS[@]}"

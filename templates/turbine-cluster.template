@@ -202,8 +202,9 @@ Parameters:
     Type:
       'String'
 
-#Conditions:
-#  SchedulerAsWorkerCondition: !Equals [ !Ref SchedulerAsWorker, True ]
+Conditions:
+  SchedulerAsWorkerCondition:
+    !Equals [!Ref SchedulerAsWorker, True]
 
 Resources:
 
@@ -269,7 +270,7 @@ Resources:
 
   SmallTaskQueue:
     Type: AWS::SQS::Queue
-#    Condition: SchedulerAsWorkerCondition
+    Condition: SchedulerAsWorkerCondition
 
   LogsBucket:
     Type: AWS::S3::Bucket
@@ -302,8 +303,7 @@ Resources:
         SecurityGroupID: !Ref InstancesSecurityGroup
         DatabaseSecret: !Ref Secret
         QueueName: !GetAtt TaskQueue.QueueName
-#        SmallQueueName: !Fn::If: [SchedulerAsWorkerCondition, !GetAtt SmallTaskQueue.QueueName, '']
-        SmallQueueName: !GetAtt SmallTaskQueue.QueueName
+        SmallQueueName: !If [SchedulerAsWorkerCondition, !GetAtt SmallTaskQueue.QueueName, '']
         LogsBucket: !Ref LogsBucket
         InstanceType: !Ref SchedulerInstanceType
         LoadExampleDags: !Ref LoadExampleDags

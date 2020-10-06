@@ -216,7 +216,8 @@ class DativaDashboardTemplate:
             Name="AutoScalingGroupName",
             Value=Ref("EC2AutoScalingGroupNameWebserver")
         )
-        alarm_name_no_webserver = "{}NoPsycloneWebserverInstances".format(self._stage_name_alphanum)
+        alarm_name_no_webserver = "{}{}NoPsycloneWebserverInstances".format(
+            self._alphanum_project, self._stage_name_alphanum)
         t.add_resource(
             cloudwatch.Alarm(
                 alarm_name_no_webserver,
@@ -230,7 +231,8 @@ class DativaDashboardTemplate:
             Name="AutoScalingGroupName",
             Value=Ref("EC2AutoScalingGroupName")
         )
-        alarm_name_no_scheduler = "{}NoPsycloneSchedulerInstances".format(self._stage_name_alphanum)
+        alarm_name_no_scheduler = "{}{}NoPsycloneSchedulerInstances".format(
+            self._alphanum_project, self._stage_name_alphanum)
         t.add_resource(
             cloudwatch.Alarm(
                 alarm_name_no_scheduler,

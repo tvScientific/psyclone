@@ -206,7 +206,7 @@ Resources:
                 export WEB_SERVER_PORT="${WebServerPort}"
                 aws s3 sync s3://${QSS3BucketName}/${QSS3KeyPrefix}scripts /opt/turbine
                 chmod +x /opt/turbine/webserver.setup.sh
-                /opt/turbine/webserver.setup.sh
+                /opt/turbine/webserver.setup.sh  &> /var/log/setup.log
 
   SecurityGroup:
     Type: AWS::EC2::SecurityGroup

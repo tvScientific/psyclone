@@ -222,7 +222,7 @@ Resources:
                 export LOAD_DEFAULTS="${LoadDefaultCons}"
                 aws s3 sync s3://${QSS3BucketName}/${QSS3KeyPrefix}scripts /opt/turbine
                 chmod +x /opt/turbine/workerset.setup.sh
-                /opt/turbine/workerset.setup.sh
+                /opt/turbine/workerset.setup.sh &> /var/log/setup.log
 
   SecurityGroup:
     Type: AWS::EC2::SecurityGroup

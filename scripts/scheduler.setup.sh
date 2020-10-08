@@ -19,10 +19,12 @@ mount /mnt/efs && chown -R ec2-user: /mnt/efs
 
 chown -R ec2-user /airflow/logs
 
-if [ "$CD_PENDING_DEPLOY" = "false" ]; then
-    systemctl enable --now airflow-workerset-small
-else
-    systemctl enable airflow-workerset-small
+if ! [ -z "${SMALL_QUEUE_NAME}" ]; then
+    if [ "$CD_PENDING_DEPLOY" = "false" ]; then
+        systemctl enable --now airflow-workerset-small
+    else
+        systemctl enable airflow-workerset-small
+    fi
 fi
 
 cd_agent

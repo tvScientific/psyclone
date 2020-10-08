@@ -36,7 +36,7 @@ class UpdateTemplates:
         self._load_templates()
         self.random_string = self._random_generator()
         self.project_name = project_name
-        if 'PROD' in stage_name:
+        if 'DEV-3' in stage_name:
             self.add_cloudtrail()
 
     def update_instance_types(self):
@@ -345,7 +345,7 @@ class UpdateTemplates:
         policy_path = os.path.join(os.path.dirname(os.path.realpath(__file__)),
                                    "cloudtrail/policies/cloudtrail_logs_bucket_policy.json")
         with open(policy_path) as infile:
-            cloudtrail_policy = json.load(infile.read())
+            cloudtrail_policy = json.loads(infile.read())
 
         self.templates_dict["master"]["Resources"]["CloudTrailLogsBucketPolicy"] = {
             "Type": "AWS::S3::BucketPolicy",

@@ -8,6 +8,7 @@ REGION=${3:-"us-east-1"}
 PROJECT=${4:-"default"}
 ADDITIONAL_TEMPLATE_PATH=${5:-""}
 
+STAGE_LWR=$(echo "$STAGE" | tr '[:upper:]' '[:lower:]')
 PROJECT_LONG="${PROJECT}-psyclone"
 STACK_NAME="${PROJECT_LONG}-${STAGE}"
 
@@ -88,3 +89,8 @@ echo "...CREATING/UPDATING CLOUDFORMATION STACKS..."
 echo "aws cloudformation deploy --template-file ${ROOT_TEMPLATE} --s3-bucket ${DEPLOY_BUCKET} --s3-prefix ${UPDATED_TEMPLATE_KEY} --stack-name ${STACK_NAME} --parameter-overrides ${PARAM_OVERRIDES} --capabilities CAPABILITY_NAMED_IAM ${PROFILE_OPT} ${REGION_OPT}"
 aws cloudformation deploy --template-file ${ROOT_TEMPLATE} --s3-bucket ${DEPLOY_BUCKET} --s3-prefix ${TURBINE_PREFIX}${UPDATED_TEMPLATE_KEY} --stack-name ${STACK_NAME} --parameter-overrides ${PARAM_OVERRIDES} --capabilities CAPABILITY_NAMED_IAM ${PROFILE_OPT} ${REGION_OPT}
 check_for_error $? "Failed to deploy template"
+
+if [[ $STAGE_LWR == *"stag"* ]] || [[ $STAGE_LWR == *"prod"* ]]; then
+    aws cloudformation update-termination-protection --enable-termination-protection --stack-name $STACK_NAME $PROFILE_OPT $REGION_OPT
+    check_for_error $? "Failed to update termination protection"
+fi

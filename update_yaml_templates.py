@@ -26,7 +26,7 @@ class UpdateTemplates:
         return ''.join(random.choice(chars) for x in range(size)).title()
 
     # better names
-    def __init__(self, templates_path, policies_base_path, updated_templates_path, stage_name):
+    def __init__(self, templates_path, policies_base_path, updated_templates_path, stage_name, project_name):
         self.templates_path = templates_path
         self.policies_base_path = policies_base_path
         self.updated_templates_path = updated_templates_path
@@ -35,6 +35,9 @@ class UpdateTemplates:
         self.templates_dict = dict()
         self._load_templates()
         self.random_string = self._random_generator()
+        self.project_name = project_name
+        if 'PROD' in stage_name:
+            self.add_cloudtrail()
 
     def update_instance_types(self):
         if self.STAGE_NAMES_AND_CONFIGS:
@@ -302,11 +305,10 @@ class UpdateTemplates:
                               parameters_and_vals={"VpcId": {"Fn::GetAtt": ["VPCStack", "Outputs.VPCID"]}})
         self.save_templates()
 
-    def generate_dashboard_template(self, project_name, stage_name, source_path, template_path):
+    def generate_dashboard_template(self, stage_name, source_path, template_path):
         """
         adds a basic generic dashboard with tracking on the webserver, scheduler and worker nodes.
         To expand this method, subclass as needed
-        :param project_name: short string identifying project
         :param stage_name: name of stage being deployed to, user to identify unique dashboards
         :param source_path: path to dashboard templates
         :param template_path: path to dashboard templates
@@ -317,7 +319,7 @@ class UpdateTemplates:
         dashboard_policies_path = os.path.join(os.path.dirname(os.path.realpath(__file__)), "dashboards", "policies")
         self.add_policies(dashboard_policies_path)
         dashboard = DativaDashboardTemplate(
-            project_name,
+            self.project_name,
             stage_name=stage_name,
             source_path=source_path,
             template_path=template_path
@@ -325,3 +327,40 @@ class UpdateTemplates:
 
         dashboard_template = dashboard.generate_template(**outputs)
         return dashboard_template, outputs
+
+    def add_cloudtrail(self):
+        """
+        Deploy CloudTrail
+        """
+        cloudtrail_bucket_dict = {
+            "Type": "AWS::S3::Bucket",
+            "Properties": {
+                "BucketName": "{project_name}-{stage_name}-cloudtrail-logs".format(
+                    project_name=self.project_name.lower(),
+                    stage_name=self.stage_name.lower()),
+            },
+            "DeletionPolicy": "Retain"
+        }
+        self.templates_dict["master"]["Resources"]["CloudTrailLogsBucket"] = cloudtrail_bucket_dict
+
+        policy_path = os.path.join(os.path.dirname(os.path.realpath(__file__)),
+                                   "cloudtrail/policies/cloudtrail_logs_bucket_policy.json")
+        with open(policy_path) as infile:
+            cloudtrail_policy = json.loads(infile.read())
+
+        self.templates_dict["master"]["Resources"]["CloudTrailLogsBucketPolicy"] = {
+            "Type": "AWS::S3::BucketPolicy",
+            "Properties": {
+                "Bucket": {"Ref": "CloudTrailLogsBucket"},
+                "PolicyDocument": cloudtrail_policy
+            }
+        }
+
+        self.templates_dict["master"]["Resources"]["CloudTrail"] = {
+            "Type": "AWS::CloudTrail::Trail",
+            "Properties": {
+                "IsLogging": True,
+                "S3BucketName": {"Ref": "CloudTrailLogsBucket"}
+            },
+            "DependsOn": ["CloudTrailLogsBucketPolicy"]
+        }

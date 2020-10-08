@@ -204,7 +204,7 @@ Parameters:
 
 Conditions:
   SchedulerAsWorkerCondition:
-    !Equals [!Ref SchedulerAsWorker, True]
+    !Equals [!Ref SchedulerAsWorker, 'True']
 
 Resources:
 
@@ -329,7 +329,7 @@ Resources:
         AllowHTTPAccessCIDR: !Ref AllowHTTPAccessCIDR
         DatabaseSecret: !Ref Secret
         QueueName: !GetAtt TaskQueue.QueueName
-        SmallQueueName: !GetAtt SmallTaskQueue.QueueName
+        SmallQueueName: !If [SchedulerAsWorkerCondition, !GetAtt SmallTaskQueue.QueueName, '']
         LogsBucket: !Ref LogsBucket
         InstanceType: !Ref WebserverInstanceType
         LoadExampleDags: !Ref LoadExampleDags
@@ -355,7 +355,7 @@ Resources:
         SecurityGroupID: !Ref InstancesSecurityGroup
         DatabaseSecret: !Ref Secret
         QueueName: !GetAtt TaskQueue.QueueName
-        SmallQueueName: !GetAtt SmallTaskQueue.QueueName
+        SmallQueueName: !If [SchedulerAsWorkerCondition, !GetAtt SmallTaskQueue.QueueName, '']
         LogsBucket: !Ref LogsBucket
         InstanceType: !Ref WorkerInstanceType
         MinGroupSize: !Ref MinGroupSize

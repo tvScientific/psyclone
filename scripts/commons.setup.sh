@@ -26,7 +26,7 @@ export AUTO_SCALING_GROUP_NAME
 export SHUTDOWN_LIFECYCLE_NAME
 
 yum install -y python3 python3-pip python3-wheel python3-devel
-pip3 install awscurl gunicorn==19.4.0
+pip3 install awscurl
 EC2_HOST_IDENTIFIER="arn:$AWS_PARTITION:ec2:$AWS_REGION:$AWS_ACCOUNT_ID"
 EC2_HOST_IDENTIFIER="$EC2_HOST_IDENTIFIER:instance/$EC2_INSTANCE_ID"
 CD_COMMAND=$(/usr/local/bin/awscurl -X POST \
@@ -97,7 +97,7 @@ export "${AIRFLOW_ENVS[@]}"
 
 yum install -y gcc libcurl-devel openssl-devel
 export PYCURL_SSL_LIBRARY=openssl
-pip3 install "apache-airflow[celery,postgres,s3,crypto]==1.10.10" "celery[sqs]==4.4.7"
+pip3 install "apache-airflow[celery,postgres,s3,crypto,google_auth]==1.10.10" "celery[sqs]==4.4.7"
 mkdir "$AIRFLOW_HOME" && chown -R ec2-user: "$AIRFLOW_HOME"
 
 systemctl enable --now cfn-hup.service

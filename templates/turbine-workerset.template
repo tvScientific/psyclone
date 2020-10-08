@@ -184,6 +184,7 @@ Parameters:
 
 Conditions:
   UsingDefaultBucket: !Equals [!Ref QSS3BucketName, 'turbine-quickstart']
+  SchedulerAsWorkerCondition: !Not [!Equals [!Ref SmallQueueName, '']]
 
 Resources:
 

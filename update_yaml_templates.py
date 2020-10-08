@@ -36,7 +36,7 @@ class UpdateTemplates:
         self._load_templates()
         self.random_string = self._random_generator()
         self.project_name = project_name
-        if 'DEV-3' in stage_name:
+        if 'PROD' in stage_name:
             self.add_cloudtrail()
 
     def update_instance_types(self):
@@ -335,8 +335,9 @@ class UpdateTemplates:
         cloudtrail_bucket_dict = {
             "Type": "AWS::S3::Bucket",
             "Properties": {
-                "BucketName": "{project_name}-{stage_name}-cloudtrail-logs".format(project_name=self.project_name,
-                                                                                   stage_name=self.stage_name.lower()),
+                "BucketName": "{project_name}-{stage_name}-cloudtrail-logs".format(
+                    project_name=self.project_name.lower(),
+                    stage_name=self.stage_name.lower()),
             },
             "DeletionPolicy": "Retain"
         }

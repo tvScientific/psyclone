@@ -26,7 +26,7 @@
         "Service": "cloudtrail.amazonaws.com"
       },
       "Resource": {
-        "Join": [
+        "Fn::Join": [
           "",
           [
             "arn:aws:s3:::",

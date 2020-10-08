@@ -36,7 +36,7 @@ class UpdateTemplates:
         self._load_templates()
         self.random_string = self._random_generator()
         self.project_name = project_name
-        if stage_name.contains('PROD'):
+        if 'PROD' in stage_name:
             self.add_cloudtrail()
 
     def update_instance_types(self):

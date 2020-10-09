@@ -172,7 +172,7 @@ class DativaDashboardTemplate:
         logger.info("Replacing values with custom delimiters in Python...")
 
         t.add_resource(cloudwatch.Dashboard(
-            self._project + "Dashboard",
+            self._alphanum_project + "Dashboard",
             DashboardName=Join("-", [
                 self._dash_project,
                 "dashboard",

@@ -83,15 +83,21 @@ envreplace /etc/cfn/hooks.d/cfn-auto-reloader.conf
 mkdir /run/airflow && chown -R ec2-user: /run/airflow
 cp "$FILES"/systemd/airflow-*.{path,timer,service} /lib/systemd/system/
 cp "$FILES"/systemd/airflow.env /etc/sysconfig/airflow.env
+cp "$FILES"/systemd/airflow-workerset-small.env /etc/sysconfig/airflow-workerset-small.env
 cp "$FILES"/systemd/airflow.conf /usr/lib/tmpfiles.d/airflow.conf
 envreplace /etc/sysconfig/airflow.env
+
+echo "SMALL_QUEUE_NAME is ${SMALL_QUEUE_NAME}"
+
+envreplace /etc/sysconfig/airflow-workerset-small.env
+envreplace /usr/lib/systemd/system/airflow-workerset-small.service
 
 mapfile -t AIRFLOW_ENVS < /etc/sysconfig/airflow.env
 export "${AIRFLOW_ENVS[@]}"
 
 yum install -y gcc libcurl-devel openssl-devel
 export PYCURL_SSL_LIBRARY=openssl
-pip3 install "apache-airflow[celery,postgres,s3,crypto]==1.10.10" "celery[sqs]==4.4.7"
+pip3 install "apache-airflow[celery,postgres,s3,crypto,google_auth]==1.10.10" "celery[sqs]==4.4.7"
 mkdir "$AIRFLOW_HOME" && chown -R ec2-user: "$AIRFLOW_HOME"
 
 systemctl enable --now cfn-hup.service

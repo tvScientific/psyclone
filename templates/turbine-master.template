@@ -222,6 +222,14 @@ Parameters:
     Default: quickstart-turbine-airflow/
     Type: String
 
+  SchedulerAsWorker:
+    Description: Whether to use Scheduler as a smaller worker with its own queue
+    AllowedValues:
+      - 'False'
+      - 'True'
+    Default: 'False'
+    Type: 'String'
+
 Resources:
 
   VPCStack:
@@ -261,6 +269,7 @@ Resources:
         VPCID: !GetAtt VPCStack.Outputs.VPCID
         PublicSubnet1ID: !GetAtt VPCStack.Outputs.PublicSubnet1ID
         PublicSubnet2ID: !GetAtt VPCStack.Outputs.PublicSubnet2ID
+        SchedulerAsWorker: !Ref SchedulerAsWorker
         PrivateSubnet1AID: !GetAtt VPCStack.Outputs.PrivateSubnet1AID
         PrivateSubnet2AID: !GetAtt VPCStack.Outputs.PrivateSubnet2AID
         AllowHTTPAccessCIDR: !Ref AllowHTTPAccessCIDR

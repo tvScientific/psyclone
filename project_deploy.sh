@@ -72,7 +72,9 @@ aws s3 mb s3://${DEPLOY_BUCKET} ${PROFILE_OPT} ${REGION_OPT}
 zip -j load_metric functions/load_metric.py
 aws s3 cp load_metric.zip s3://${DEPLOY_BUCKET}/${TURBINE_PREFIX}functions/package.zip ${PROFILE_OPT}
 # Upload scripts used for airflow initialisation on EC2 machines
-aws s3 cp scripts/ s3://${DEPLOY_BUCKET}/${TURBINE_PREFIX}scripts --recursive ${PROFILE_OPT} >/dev/null
+echo "UPLOADING SCRIPTS HERE"
+aws s3 cp scripts/ s3://${DEPLOY_BUCKET}/${TURBINE_PREFIX}scripts --recursive ${PROFILE_OPT}
+echo "FINISHED UPLOADING SCRIPTS HERE"
 
 # upload vpc script
 aws s3 cp submodules/quickstart-aws-vpc/templates/aws-vpc.template s3://${DEPLOY_BUCKET}/${TURBINE_PREFIX}submodules/quickstart-aws-vpc/templates/aws-vpc.template ${PROFILE_OPT}

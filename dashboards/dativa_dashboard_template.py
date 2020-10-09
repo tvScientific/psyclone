@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 
 """
-(c) Dativa 2019, all rights reserved
+(c) Deductive 2019, all rights reserved
 -----------------------------------------
 This code is licensed under MIT license
 
@@ -13,7 +13,7 @@ are permitted provided that the following conditions are met:
     * Redistributions in binary form must reproduce the above copyright notice,
     this list of conditions and the following disclaimer in the documentation
     and/or other materials provided with the distribution.
-    * Neither the name of the Dativa Limited nor the names of
+    * Neither the name of the Deductive Limited nor the names of
     its contributors may be used to endorse or promote products derived from
     this software without specific prior written permission.
 
@@ -42,7 +42,7 @@ from troposphere import sns
 """
 Initialise logger
 """
-logger = logging.getLogger("dativa.tools.aws.dashboard")
+logger = logging.getLogger("deductive.tools.aws.dashboard")
 
 
 class DativaDashboardTemplate:
@@ -62,6 +62,7 @@ class DativaDashboardTemplate:
         # Note: Module names should use '_' not '-' but some names cannot contain '_' so replace with dashes
         self._project = project_name
         self._dash_project = self._project.replace('_', '-')
+        self._alphanum_project = self._project.replace('_', '').replace('-', '')
 
         self._file_ext = 'json'
         self._file_ext_output = 'template'
@@ -190,7 +191,8 @@ class DativaDashboardTemplate:
         """ adds alarms in place to template and an sns topic for the alarm"""
 
         # Add SNS topic to alert in case of failure
-        sns_alarm_resource = "{}PsycloneCloudWatchAlarmTopic".format(self._stage_name_alphanum)
+        sns_alarm_resource = "{}{}PsycloneCloudWatchAlarmTopic".format(
+            self._alphanum_project, self._stage_name_alphanum)
         sns_alarm_topic_name = Join("-", [sns_alarm_resource, Ref("DeploymentStage")])
         t.add_resource(sns.Topic(sns_alarm_resource, DisplayName=sns_alarm_topic_name, TopicName=sns_alarm_topic_name))
 
@@ -214,7 +216,8 @@ class DativaDashboardTemplate:
             Name="AutoScalingGroupName",
             Value=Ref("EC2AutoScalingGroupNameWebserver")
         )
-        alarm_name_no_webserver = "{}NoPsycloneWebserverInstances".format(self._stage_name_alphanum)
+        alarm_name_no_webserver = "{}{}NoPsycloneWebserverInstances".format(
+            self._alphanum_project, self._stage_name_alphanum)
         t.add_resource(
             cloudwatch.Alarm(
                 alarm_name_no_webserver,
@@ -228,7 +231,8 @@ class DativaDashboardTemplate:
             Name="AutoScalingGroupName",
             Value=Ref("EC2AutoScalingGroupName")
         )
-        alarm_name_no_scheduler = "{}NoPsycloneSchedulerInstances".format(self._stage_name_alphanum)
+        alarm_name_no_scheduler = "{}{}NoPsycloneSchedulerInstances".format(
+            self._alphanum_project, self._stage_name_alphanum)
         t.add_resource(
             cloudwatch.Alarm(
                 alarm_name_no_scheduler,

@@ -81,6 +81,12 @@ Parameters:
       Name of the queue to be used as message broker between the scheduler and
       worker instances.
     Type: String
+  SmallQueueName:
+    Description: >-
+      Name of the queue to be used as message broker between the scheduler and
+      worker instances for the small worker running on the scheduler.
+    Type: String
+    Default: ""
   LogsBucket:
     Description: >-
       Name of the bucket where task logs are remotely stored.
@@ -132,7 +138,9 @@ Parameters:
     AllowedPattern: '^[0-9a-zA-Z-/]*$'
     Default: quickstart-turbine-airflow/
     Type: String
-
+Conditions:
+  SchedulerAsWorkerCondition: !Not [!Equals [!Ref SmallQueueName, '']]
+  
 Resources:
 
   AutoScalingGroup:
@@ -178,12 +186,13 @@ Resources:
                 export AWS_STACK_NAME="${AWS::StackName}"
                 export LOGS_BUCKET="${LogsBucket}"
                 export QUEUE_NAME="${QueueName}"
+                export SMALL_QUEUE_NAME="${SmallQueueName}"
                 export DB_SECRETS_ARN="${DatabaseSecret}"
                 export LOAD_EXAMPLES="${LoadExampleDags}"
                 export LOAD_DEFAULTS="${LoadDefaultCons}"
                 aws s3 sync s3://${QSS3BucketName}/${QSS3KeyPrefix}scripts /opt/turbine
                 chmod +x /opt/turbine/scheduler.setup.sh
-                /opt/turbine/scheduler.setup.sh
+                /opt/turbine/scheduler.setup.sh  &> /var/log/setup.log
 
   IamInstanceProfile:
     Type: AWS::IAM::InstanceProfile
@@ -244,7 +253,11 @@ Resources:
                   - sqs:GetQueueUrl
                   - sqs:ReceiveMessage
                   - sqs:SendMessage
-                Resource: !Sub arn:aws:sqs:${AWS::Region}:${AWS::AccountId}:${QueueName}
+                Resource: !If
+                  - SchedulerAsWorkerCondition
+                  - - !Sub arn:aws:sqs:${AWS::Region}:${AWS::AccountId}:${QueueName}
+                    - !Sub arn:aws:sqs:${AWS::Region}:${AWS::AccountId}:${SmallQueueName}
+                  - !Sub arn:aws:sqs:${AWS::Region}:${AWS::AccountId}:${QueueName}]
         - PolicyName: !Sub TurbineAirflowSchedulerLogsRWPolicy-${AWS::StackName}
           PolicyDocument:
             Version: 2012-10-17

@@ -87,7 +87,7 @@ cp "$FILES"/systemd/airflow-workerset-small.env /etc/sysconfig/airflow-workerset
 cp "$FILES"/systemd/airflow.conf /usr/lib/tmpfiles.d/airflow.conf
 envreplace /etc/sysconfig/airflow.env
 
-echo ${SMALL_QUEUE_NAME}
+echo "SMALL_QUEUE_NAME is ${SMALL_QUEUE_NAME}"
 
 envreplace /etc/sysconfig/airflow-workerset-small.env
 envreplace /usr/lib/systemd/system/airflow-workerset-small.service

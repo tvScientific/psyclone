@@ -36,6 +36,7 @@ class Labels:
 
 
 class UpdateTemplates:
+    ALLOWED_STAGES = ["PROD", "STAG", "DEV", "DEV-1", "DEV-2", "DEV-3"]
     PRODLIKE_STACKS = ["PROD", "STAG"]
     DOMAIN = "psyclone.pro"
     STAGE_NAMES_AND_CONFIGS = ()
@@ -62,7 +63,8 @@ class UpdateTemplates:
             if region is None:
                 raise ValueError('Region is required to deploy a load balancer')
             loadbalancer_class = LoadBalancerTemplate(
-                stage_name, region, self.DOMAIN, self.random_string, self.PRODLIKE_STACKS)
+                stage_name, region, self.DOMAIN, self.random_string, project_name, self.PRODLIKE_STACKS,
+                self.ALLOWED_STAGES)
             loadbalancer_and_routing = loadbalancer_class.loadbalancer_and_routing()
             cfs_path = loadbalancer_class.write_to_file("loadbalancer-and-routing-stack",
                                                         loadbalancer_and_routing)
@@ -410,7 +412,9 @@ class UpdateTemplates:
 
 class LoadBalancerTemplate:
 
-    def __init__(self, stage_name, region, domain, random_string, prod_like_stacks):
+    def __init__(self, stage_name, region, domain, random_string, project_name, prod_like_stacks, allowed_stages):
+        self._project_name = project_name
+        self._project_name_alphanum = project_name.replace("-", "").replace("_", "")
         self._basepath = "./unpackaged-templates/"
         self._stage_name = stage_name
         self._region = region
@@ -429,14 +433,9 @@ class LoadBalancerTemplate:
             for mapping, transformation in self._mapping_and_transformation.items()
         }
         self._file_ext = ".template"
-        self.stage_name_subdomain_mapping = {
-            "PROD": "airflow",
-            "STAG": "airflow-stag",
-            "DEV": "airflow-dev",
-            "DEV-1": "airflow-dev-1",
-            "DEV-2": "airflow-dev-2",
-            "DEV-3": "airflow-dev-3",
-        }
+        self.stage_name_subdomain_mapping = {stage: self._project_name + "-" + stage.lower() for stage in
+                                             allowed_stages}
+        self.stage_name_subdomain_mapping["PROD"] = self._project_name
         self.domain = domain
         self.alias = "{}.{}".format(self.stage_name_subdomain_mapping[self._stage_name], self.domain)
         self.random_string = random_string
@@ -500,14 +499,18 @@ class LoadBalancerTemplate:
             Matcher=elasticloadbalancingv2.Matcher(HttpCode="302"),
             Port=80,
             TargetType="instance",
-            Name="WSTargetGroup{}{}".format(self.current_mapping_vals["CamelNoSepStage"], self.random_string),
+            Name="{}Web{}{}".format(
+                self._project_name_alphanum,
+                self.current_mapping_vals["CamelNoSepStage"],
+                self.random_string
+            ),
             VpcId=Ref(Labels.vpc_id_for_sgs),
         ))
 
         sg = ec2.SecurityGroup(
             "SgOpenAll",
             GroupDescription="A security group to hold IP addresses which allow access to CloudFront",
-            GroupName="SgOpenAll{}".format(self.current_mapping_vals["CamelNoSepStage"]),
+            GroupName="{}SgOpenAll{}".format(self._project_name_alphanum, self.current_mapping_vals["CamelNoSepStage"]),
             SecurityGroupIngress=[
                 ec2.SecurityGroupRule(
                     IpProtocol="tcp", ToPort=80, FromPort=80,
@@ -533,7 +536,7 @@ class LoadBalancerTemplate:
         t.add_resource(sg)
 
         if self._prod_like_logical:
-            bucket_name = Join("-", ["load-balancer-logging-bucket", AccountId, self._stage_name.lower()])
+            bucket_name = Join("-", [self._project_name, "load-balancer-logging-bucket", AccountId, self._stage_name.lower()])
             bucket_prefix = "application-load-balancer-logs/data-ingest-reporting/{}".format(self._stage_name.lower())
             load_balancer_attributes = [
                 elasticloadbalancingv2.LoadBalancerAttributes(
@@ -602,7 +605,7 @@ class LoadBalancerTemplate:
             Scheme="internet-facing",
             LoadBalancerAttributes=load_balancer_attributes,
             SecurityGroups=[Ref(sg)],
-            Name="LoadBalancer{}".format(self.current_mapping_vals["CamelNoSepStage"]),
+            Name="{}Psyclone{}".format(self._project_name_alphanum, self.current_mapping_vals["CamelNoSepStage"]),
             Subnets=Split(",", Ref(Labels.subnet_ids)),
             Type="application",
             DependsOn=[load_balancer_bucket, policy_logical_id] if self._prod_like_logical else []

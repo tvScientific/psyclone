@@ -1,3 +1,4 @@
+import configparser
 import glob
 import json
 import logging
@@ -6,7 +7,14 @@ import random
 import string
 import sys
 
+from awacs.aws import PolicyDocument, Statement, Principal, Action, Condition, StringEquals
 from cfn_tools import load_yaml, dump_yaml
+from troposphere import Ref, Parameter, Template, Output, Join, GetAtt, Split, NoValue, AccountId
+from troposphere import cloudfront
+from troposphere import ec2
+from troposphere import elasticloadbalancingv2
+from troposphere import route53
+from troposphere import s3
 
 from psyclone.dashboards.dativa_dashboard_template import DativaDashboardTemplate
 
@@ -16,6 +24,15 @@ stdout.setFormatter(logging.Formatter('%(message)s'))
 stdout.setLevel(logging.INFO)
 logger.addHandler(stdout)
 logger.setLevel(logging.INFO)
+
+
+class Labels:
+    security_group_attach_to_lb = "SecurityGroupIDsToAttachToLoadBalancer"
+    vpc_id_for_sgs = "VpcId"
+    target_group_arns_for_autoscaling = "TargetGroupNameForAutoscaling"
+    subnet_ids = "SubnetIDs"
+    webserver_label = 'webserver'
+    vpc_s3_endpoint_id = "VPCS3EndpointID"
 
 
 class UpdateTemplates:
@@ -364,3 +381,295 @@ class UpdateTemplates:
             },
             "DependsOn": ["CloudTrailLogsBucketPolicy"]
         }
+
+
+class DeploymentTemplates:
+
+    def __init__(self, stage_name, region, domain, random_string, prod_like_stacks):
+        self._basepath = "./unpackaged-templates/"
+        self._stage_name = stage_name
+        self._region = region
+        self._prod_like_stacks = prod_like_stacks
+        self._prod_like_logical = self._stage_name in self._prod_like_stacks
+        self._mapping_and_transformation = {
+            # e.g. DEV in us-west-2 would become 'dev-us-west-2'
+            "LowerStage": lambda x: "-".join([x, self._region]).lower().replace("_", "-"),
+            # e.g. DEV in us-west-2 would become 'dev_us_west_2'
+            "LowerUnderStage": lambda x: "_".join([x, self._region]).lower().replace("-", "_"),
+            # e.g. DEV in us-west-2 would become DevUsWest2
+            "CamelNoSepStage": lambda x: "".join([x, self._region]).title().replace("-", "").replace("_", ""),
+        }
+        self.current_mapping_vals = {
+            mapping: transformation(self._stage_name)
+            for mapping, transformation in self._mapping_and_transformation.items()
+        }
+        self._file_ext = ".template"
+        self.stage_name_subdomain_mapping = {
+            "PROD": "airflow",
+            "STAG": "airflow-stag",
+            "DEV": "airflow-dev",
+            "DEV-1": "airflow-dev-1",
+            "DEV-2": "airflow-dev-2",
+            "DEV-3": "airflow-dev-3",
+        }
+        self.domain = domain
+        self.alias = "{}.{}".format(self.stage_name_subdomain_mapping[self._stage_name], self.domain)
+        self.random_string = random_string
+
+    @staticmethod
+    def _get_custom_error_responses():
+        return [
+            cloudfront.CustomErrorResponse(
+                ErrorCachingMinTTL=300,
+                ErrorCode=403,
+                ResponseCode=200,
+                ResponsePagePath="/index.html"
+            ),
+            cloudfront.CustomErrorResponse(
+                ErrorCachingMinTTL=300,
+                ErrorCode=404,
+                ResponseCode=200,
+                ResponsePagePath="/index.html"
+            ),
+        ]
+
+    def _get_bucket_encryption_config(self):
+        encryption_config = s3.BucketEncryption(
+            ServerSideEncryptionConfiguration=[s3.ServerSideEncryptionRule(
+                ServerSideEncryptionByDefault=s3.ServerSideEncryptionByDefault(
+                    SSEAlgorithm='AES'
+                )
+            )]
+        )
+        return encryption_config
+
+    def loadbalancer_and_routing(self):
+        t = Template("AWS CloudFormation template:"
+                     " Contains the CloudFront Distributions and appropriate routing to make it work.")
+        t.add_parameter(Parameter(
+            "SSLCertArn",
+            Type="String"))
+        t.add_parameter(Parameter(
+            Labels.subnet_ids,
+            Type="String",
+            Description="Subnet IDs to use for the load balancer"
+        ))
+        t.add_parameter(Parameter(
+            Labels.vpc_id_for_sgs,
+            Type="String",
+            Description="VPC ID to be used for the load balancer and target group"
+        ))
+        t.add_parameter(Parameter(
+            Labels.vpc_s3_endpoint_id,
+            Type="String",
+            Description="VPC S3 endpoint ID for use in the loadbalancer to log to"
+        ))
+
+        # define application load balancer here
+        load_balancer = "LoadBalancer"
+        webserver_target_group = "WebserverTargetGroup"
+        t.add_resource(elasticloadbalancingv2.TargetGroup(
+            webserver_target_group,
+            HealthCheckProtocol="HTTP",
+            Protocol="HTTP",
+            Matcher=elasticloadbalancingv2.Matcher(HttpCode="302"),
+            Port=80,
+            TargetType="instance",
+            Name="WSTargetGroup{}{}".format(self.current_mapping_vals["CamelNoSepStage"], self.random_string),
+            VpcId=Ref(Labels.vpc_id_for_sgs),
+        ))
+
+        sg = ec2.SecurityGroup(
+            "SgOpenAll",
+            GroupDescription="A security group to hold IP addresses which allow access to CloudFront",
+            GroupName="SgOpenAll{}".format(self.current_mapping_vals["CamelNoSepStage"]),
+            SecurityGroupIngress=[
+                ec2.SecurityGroupRule(
+                    IpProtocol="tcp", ToPort=80, FromPort=80,
+                    CidrIp="0.0.0.0/0", Description="OpenAllHTTP"
+                ),
+                ec2.SecurityGroupRule(
+                    IpProtocol="tcp", ToPort=443, FromPort=443,
+                    CidrIp="0.0.0.0/0", Description="OpenAllHTTPS"
+                ),
+            ],
+            SecurityGroupEgress=[
+                ec2.SecurityGroupRule(
+                    IpProtocol="tcp", ToPort=80, FromPort=80,
+                    CidrIp="0.0.0.0/0", Description="OpenAllHTTP"
+                ),
+                ec2.SecurityGroupRule(
+                    IpProtocol="tcp", ToPort=443, FromPort=443,
+                    CidrIp="0.0.0.0/0", Description="OpenAllHTTPS"
+                ),
+            ],
+            VpcId=Ref(Labels.vpc_id_for_sgs),
+        )
+        t.add_resource(sg)
+
+        if self._prod_like_logical:
+            bucket_name = Join("-", ["load-balancer-logging-bucket", AccountId, self._stage_name.lower()])
+            bucket_prefix = "application-load-balancer-logs/data-ingest-reporting/{}".format(self._stage_name.lower())
+            load_balancer_attributes = [
+                elasticloadbalancingv2.LoadBalancerAttributes(
+                    Key="access_logs.s3.enabled", Value="true"),
+                elasticloadbalancingv2.LoadBalancerAttributes(
+                    Key="access_logs.s3.bucket", Value=bucket_name),
+                elasticloadbalancingv2.LoadBalancerAttributes(
+                    Key="access_logs.s3.prefix", Value=bucket_prefix),
+            ]
+
+            loadbalancer_bucket_logical_id = "LoadbalancerLogsBucket"
+            load_balancer_bucket = s3.Bucket(
+                loadbalancer_bucket_logical_id,
+                BucketName=bucket_name,
+                DeletionPolicy="Retain",
+                AccessControl="LogDeliveryWrite",
+                # BucketEncryption=self._get_bucket_encryption_config(),
+            )
+
+            t.add_resource(load_balancer_bucket)
+            policy_logical_id = loadbalancer_bucket_logical_id + "BucketPolicy"
+            t.add_resource(s3.BucketPolicy(
+                policy_logical_id,
+                PolicyDocument=PolicyDocument(
+                    Version="2012-10-17",
+                    Id="AccessLogsPolicy",
+                    Statement=[
+                        Statement(
+                            Sid="AWSConsoleStmt-1592839844977",
+                            Effect="Allow",
+                            Principal=Principal(
+                                "AWS", "arn:aws:iam::127311923021:root"
+                            ),
+                            Action=[Action("s3", "PutObject")],
+                            Resource=[Join("/", [GetAtt(loadbalancer_bucket_logical_id, "Arn"), "*"])]
+                        ),
+                        Statement(
+                            Sid="AWSLogDeliveryWrite",
+                            Effect="Allow",
+                            Principal=Principal(
+                                "Service", "delivery.logs.amazonaws.com"
+                            ),
+                            Action=[Action("s3", "PutObject")],
+                            Resource=[Join("/", [GetAtt(loadbalancer_bucket_logical_id, "Arn"), "*"])],
+                            Condition=Condition(StringEquals("s3:x-amz-acl", "bucket-owner-full-control")),
+                        ),
+                        Statement(
+                            Sid="AWSLogDeliveryAclCheck",
+                            Effect="Allow",
+                            Principal=Principal("Service", "delivery.logs.amazonaws.com"),
+                            Action=[Action("s3", "GetBucketAcl")],
+                            Resource=[GetAtt(loadbalancer_bucket_logical_id, "Arn")]
+                        )
+                    ]
+                ),
+                Bucket=Ref(loadbalancer_bucket_logical_id),
+                DependsOn=[loadbalancer_bucket_logical_id]
+            ))
+        else:
+            load_balancer_bucket = NoValue
+            load_balancer_attributes = NoValue
+            policy_logical_id = NoValue
+
+        t.add_resource(elasticloadbalancingv2.LoadBalancer(
+            load_balancer,
+            Scheme="internet-facing",
+            LoadBalancerAttributes=load_balancer_attributes,
+            SecurityGroups=[Ref(sg)],
+            Name="LoadBalancer{}".format(self.current_mapping_vals["CamelNoSepStage"]),
+            Subnets=Split(",", Ref(Labels.subnet_ids)),
+            Type="application",
+            DependsOn=[load_balancer_bucket, policy_logical_id] if self._prod_like_logical else []
+        ))
+
+        t.add_resource(elasticloadbalancingv2.Listener(
+            "HTTPRedirectToWebserver",
+            Port="80",
+            Protocol="HTTP",
+            LoadBalancerArn=Ref(load_balancer),
+            DefaultActions=[
+                elasticloadbalancingv2.Action(
+                    RedirectConfig=elasticloadbalancingv2.RedirectConfig(
+                        Port="443",
+                        Protocol="HTTPS",
+                        StatusCode="HTTP_301"
+                    ),
+                    Type="redirect",
+                )
+            ]
+        ))
+
+        t.add_resource(elasticloadbalancingv2.Listener(
+            "HTTPSToWebserver",
+            Certificates=[elasticloadbalancingv2.Certificate(CertificateArn=Ref("SSLCertArn"))],
+            Port="443",
+            Protocol="HTTPS",
+            LoadBalancerArn=Ref(load_balancer),
+            DefaultActions=[
+                elasticloadbalancingv2.Action(
+                    TargetGroupArn=Ref(webserver_target_group),
+                    Type="forward",
+                )
+            ]
+        ))
+
+        hosted_zone_name = self.domain + "."
+        t.add_resource(
+            route53.RecordSetType(
+                "CloudFrontDistributionToEC2{}".format(self.current_mapping_vals["CamelNoSepStage"]),
+                HostedZoneName=hosted_zone_name,
+                Comment="CNAME redirect to aws.amazon.com.",
+                Name=self.alias,
+                Type="CNAME",
+                TTL="300",
+                ResourceRecords=[GetAtt(load_balancer, "DNSName")],
+            )
+        )
+        t.add_output(Output(
+            Labels.target_group_arns_for_autoscaling,
+            Value=Ref(webserver_target_group),
+            Description="ARN for target group associated with the webserver"
+        ))
+        return t
+
+    def get_output_filename(self, stack_name):
+        output_path = "{}{}{}".format(self._basepath, stack_name, self._file_ext)
+        return output_path
+
+    def write_to_file(self, stack_name, t):
+        output_path = self.get_output_filename(stack_name)
+        yml_string = t.to_yaml()
+        logger.info("Writing to {}".format(output_path))
+        with open(output_path, "w") as f:
+            f.write(yml_string)
+        return output_path
+
+
+def write_modified_airflow_config(path_to_config, stage_name, project_name, domain):
+    cfg = configparser.ConfigParser()
+    cfg.read(path_to_config)
+    lower_under_stage = stage_name.lower().replace('-', '_')
+    lower_under_project_name = project_name.lower().replace('-', '_')
+
+    try:
+        alias = "{}.{}".format(stage_name, domain)
+    except KeyError:
+        alias = ''
+    # Update URL used on emails to link to log files etc
+    if alias:
+        cfg.set('webserver', 'base_url', "http://" + alias)
+
+    email_address = "{}_{}_{}".format(lower_under_stage, lower_under_project_name, 'airflow@deductive.com')
+    # Update email address which delivers updates to give stackname
+    cfg.set('webserver', 'smtp_mail_from', email_address)
+    # Update URL used on emails to link to log files etc
+    cfg.set('webserver', 'base_url', "http://" + alias)
+
+    # Add section for custom config args
+    # - intended to avoid conflict with existing or new variables from airflow or turbine
+    cfg.add_section('deductive_custom')
+    cfg.set("deductive_custom", "stage_name", stage_name)
+    cfg.set("deductive_custom", "google_auth_secret_key", "data-ingest/DEV/google-api-secret")
+    with open(path_to_config, "w") as file:
+        cfg.write(file)

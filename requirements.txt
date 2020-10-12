@@ -7,3 +7,4 @@ pytest
 taskcat
 yq
 troposphere
+awacs

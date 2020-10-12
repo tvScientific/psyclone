@@ -36,6 +36,8 @@ class Labels:
 
 
 class UpdateTemplates:
+    PRODLIKE_STACKS = ["PROD", "STAG"]
+    DOMAIN = "psyclone.pro"
     STAGE_NAMES_AND_CONFIGS = ()
 
     @staticmethod
@@ -43,7 +45,8 @@ class UpdateTemplates:
         return ''.join(random.choice(chars) for x in range(size)).title()
 
     # better names
-    def __init__(self, templates_path, policies_base_path, updated_templates_path, stage_name, project_name):
+    def __init__(self, templates_path, policies_base_path, updated_templates_path, stage_name, project_name,
+                 region=None, load_balancer=False):
         self.templates_path = templates_path
         self.policies_base_path = policies_base_path
         self.updated_templates_path = updated_templates_path
@@ -55,6 +58,28 @@ class UpdateTemplates:
         self.project_name = project_name
         if 'PROD' in stage_name:
             self.add_cloudtrail()
+        if load_balancer:
+            if region is None:
+                raise ValueError('Region is required to deploy a load balancer')
+            loadbalancer_class = LoadBalancerTemplate(
+                stage_name, region, self.DOMAIN, self.random_string, self.PRODLIKE_STACKS)
+            loadbalancer_and_routing = loadbalancer_class.loadbalancer_and_routing()
+            cfs_path = loadbalancer_class.write_to_file("loadbalancer-and-routing-stack",
+                                                        loadbalancer_and_routing)
+            self.add_template(
+                cfs_path,
+                {
+                    Labels.vpc_id_for_sgs: {"Fn::GetAtt": ["VPCStack", "Outputs.VPCID"]},
+                    Labels.vpc_s3_endpoint_id: {"Fn::GetAtt": ["VPCStack", "Outputs.S3VPCEndpoint"]},
+                    Labels.subnet_ids: Join(
+                        ",",
+                        [
+                            GetAtt('VPCStack', 'Outputs.PublicSubnet1ID'),
+                            GetAtt('VPCStack', 'Outputs.PublicSubnet2ID'),
+                        ]
+                    ).to_dict()
+                },
+            )
 
     def update_instance_types(self):
         if self.STAGE_NAMES_AND_CONFIGS:
@@ -383,7 +408,7 @@ class UpdateTemplates:
         }
 
 
-class DeploymentTemplates:
+class LoadBalancerTemplate:
 
     def __init__(self, stage_name, region, domain, random_string, prod_like_stacks):
         self._basepath = "./unpackaged-templates/"

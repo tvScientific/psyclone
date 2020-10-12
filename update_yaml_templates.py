@@ -82,6 +82,37 @@ class UpdateTemplates:
                     ).to_dict()
                 },
             )
+            self.update_webserver()
+
+    def update_webserver(self):
+        """ to_include_loadbalancer_and_disable_access """
+        self.templates_dict['master']['Resources']['TurbineCluster']['Properties']['Parameters'].update(
+            {Labels.target_group_arns_for_autoscaling: {
+                "Fn::GetAtt": ["LoadbalancerAndRoutingStack", "Outputs." + Labels.target_group_arns_for_autoscaling]
+            }}
+        )
+        webserver_label = Labels.webserver_label
+        self.templates_dict[webserver_label]['Parameters'].update(
+            {
+                Labels.target_group_arns_for_autoscaling: {
+                    "Description": "ARNs of any target groups to attach to the autoscaling configuration",
+                    "Type": "String",
+                }
+            }
+        )
+        self.templates_dict['cluster']['Resources']['WebserverStack']['Properties'][
+            'Parameters'].update(
+            {Labels.target_group_arns_for_autoscaling: {"Ref": Labels.target_group_arns_for_autoscaling}}
+        )
+        self.templates_dict[webserver_label]['Resources']['AutoScalingGroup']['Properties'].update(
+            {"TargetGroupARNs": [{"Ref": Labels.target_group_arns_for_autoscaling}]}
+        )
+        self.templates_dict['cluster']['Parameters'].update(
+            {
+                Labels.target_group_arns_for_autoscaling:
+                    {"Description": "Load balancer name to attach to the autoscaling group", "Type": "String"}
+            }
+        )
 
     def update_instance_types(self):
         if self.STAGE_NAMES_AND_CONFIGS:
@@ -673,31 +704,31 @@ class LoadBalancerTemplate:
             f.write(yml_string)
         return output_path
 
+    @staticmethod
+    def write_modified_airflow_config(path_to_config, stage_name, project_name, domain):
+        cfg = configparser.ConfigParser()
+        cfg.read(path_to_config)
+        lower_under_stage = stage_name.lower().replace('-', '_')
+        lower_under_project_name = project_name.lower().replace('-', '_')
 
-def write_modified_airflow_config(path_to_config, stage_name, project_name, domain):
-    cfg = configparser.ConfigParser()
-    cfg.read(path_to_config)
-    lower_under_stage = stage_name.lower().replace('-', '_')
-    lower_under_project_name = project_name.lower().replace('-', '_')
+        try:
+            alias = "{}.{}".format(stage_name, domain)
+        except KeyError:
+            alias = ''
+        # Update URL used on emails to link to log files etc
+        if alias:
+            cfg.set('webserver', 'base_url', "http://" + alias)
 
-    try:
-        alias = "{}.{}".format(stage_name, domain)
-    except KeyError:
-        alias = ''
-    # Update URL used on emails to link to log files etc
-    if alias:
+        email_address = "{}_{}_{}".format(lower_under_stage, lower_under_project_name, 'airflow@psyclone.com')
+        # Update email address which delivers updates to give stackname
+        cfg.set('webserver', 'smtp_mail_from', email_address)
+        # Update URL used on emails to link to log files etc
         cfg.set('webserver', 'base_url', "http://" + alias)
 
-    email_address = "{}_{}_{}".format(lower_under_stage, lower_under_project_name, 'airflow@deductive.com')
-    # Update email address which delivers updates to give stackname
-    cfg.set('webserver', 'smtp_mail_from', email_address)
-    # Update URL used on emails to link to log files etc
-    cfg.set('webserver', 'base_url', "http://" + alias)
-
-    # Add section for custom config args
-    # - intended to avoid conflict with existing or new variables from airflow or turbine
-    cfg.add_section('deductive_custom')
-    cfg.set("deductive_custom", "stage_name", stage_name)
-    cfg.set("deductive_custom", "google_auth_secret_key", "data-ingest/DEV/google-api-secret")
-    with open(path_to_config, "w") as file:
-        cfg.write(file)
+        # Add section for custom config args
+        # - intended to avoid conflict with existing or new variables from airflow or turbine
+        cfg.add_section('deductive_custom')
+        cfg.set("deductive_custom", "stage_name", stage_name)
+        cfg.set("deductive_custom", "google_auth_secret_key", "data-ingest/DEV/google-api-secret")
+        with open(path_to_config, "w") as file:
+            cfg.write(file)

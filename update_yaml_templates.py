@@ -717,19 +717,18 @@ class LoadBalancerTemplate:
         return output_path
 
     @staticmethod
-    def write_modified_airflow_config(path_to_config, stage_name, project_name, domain):
+    def write_modified_airflow_config(path_to_unmodified, path_to_config, stage_name, project_name, domain,
+                                      custom_configs=None):
         cfg = configparser.ConfigParser()
-        cfg.read(path_to_config)
+        cfg.read(path_to_unmodified)
         lower_under_stage = stage_name.lower().replace('-', '_')
         lower_under_project_name = project_name.lower().replace('-', '_')
 
-        try:
-            alias = "{}.{}".format(stage_name, domain)
-        except KeyError:
-            alias = ''
+        alias = "{}.{}".format(project_name, domain) if stage_name == "PROD" else "{}-{}.{}".format(project_name,
+                                                                                                    stage_name, domain)
+
         # Update URL used on emails to link to log files etc
-        if alias:
-            cfg.set('webserver', 'base_url', "http://" + alias)
+        cfg.set('webserver', 'base_url', "http://" + alias)
 
         email_address = "{}_{}_{}".format(lower_under_stage, lower_under_project_name, 'airflow@psyclone.com')
         # Update email address which delivers updates to give stackname
@@ -739,8 +738,9 @@ class LoadBalancerTemplate:
 
         # Add section for custom config args
         # - intended to avoid conflict with existing or new variables from airflow or turbine
-        cfg.add_section('deductive_custom')
-        cfg.set("deductive_custom", "stage_name", stage_name)
-        cfg.set("deductive_custom", "google_auth_secret_key", "data-ingest/DEV/google-api-secret")
+        if custom_configs:
+            cfg.add_section('deductive_custom')
+            for key, value in custom_configs.items():
+                cfg.set("deductive_custom", key, value)
         with open(path_to_config, "w") as file:
             cfg.write(file)

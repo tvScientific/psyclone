@@ -31,7 +31,11 @@ class Labels:
     vpc_id_for_sgs = "VpcId"
     target_group_arns_for_autoscaling = "TargetGroupNameForAutoscaling"
     subnet_ids = "SubnetIDs"
-    webserver_label = 'webserver'
+    master_label = "master"
+    cluster_label = "cluster"
+    workerset_label = "workerset"
+    scheduler_label = "scheduler"
+    webserver_label = "webserver"
     vpc_s3_endpoint_id = "VPCS3EndpointID"
 
 
@@ -52,8 +56,15 @@ class UpdateTemplates:
         self.policies_base_path = policies_base_path
         self.updated_templates_path = updated_templates_path
         self.stage_name = stage_name
-        self.template_list = ['master', 'cluster', 'scheduler', 'webserver', 'workerset']
+        self.template_list = [
+            Labels.master_label,
+            Labels.cluster_label,
+            Labels.webserver_label,
+            Labels.scheduler_label,
+            Labels.workerset_label
+        ]
         self.templates_dict = dict()
+        self.region = region
         self._load_templates()
         self.random_string = self._random_generator()
         self.project_name = project_name
@@ -86,7 +97,7 @@ class UpdateTemplates:
 
     def update_webserver(self):
         """ to_include_loadbalancer_and_disable_access """
-        self.templates_dict['master']['Resources']['TurbineCluster']['Properties']['Parameters'].update(
+        self.templates_dict[Labels.master_label]['Resources']['TurbineCluster']['Properties']['Parameters'].update(
             {Labels.target_group_arns_for_autoscaling: {
                 "Fn::GetAtt": ["LoadbalancerAndRoutingStack", "Outputs." + Labels.target_group_arns_for_autoscaling]
             }}
@@ -100,14 +111,15 @@ class UpdateTemplates:
                 }
             }
         )
-        self.templates_dict['cluster']['Resources']['WebserverStack']['Properties'][
+
+        self.templates_dict[Labels.cluster_label]['Resources']['WebserverStack']['Properties'][
             'Parameters'].update(
             {Labels.target_group_arns_for_autoscaling: {"Ref": Labels.target_group_arns_for_autoscaling}}
         )
         self.templates_dict[webserver_label]['Resources']['AutoScalingGroup']['Properties'].update(
             {"TargetGroupARNs": [{"Ref": Labels.target_group_arns_for_autoscaling}]}
         )
-        self.templates_dict['cluster']['Parameters'].update(
+        self.templates_dict[Labels.cluster_label]['Parameters'].update(
             {
                 Labels.target_group_arns_for_autoscaling:
                     {"Description": "Load balancer name to attach to the autoscaling group", "Type": "String"}
@@ -122,20 +134,20 @@ class UpdateTemplates:
                     instance_type = self.STAGE_NAMES_AND_CONFIGS[self.stage_name]["worker_instance_type"]
                     logger.info("Updating templates to use {} as worker instance type from class attribute".format(
                         instance_type))
-                    self.templates_dict["master"]["Parameters"]["WorkerInstanceType"]["Default"] = instance_type
+                    self.templates_dict[Labels.master_label]["Parameters"]["WorkerInstanceType"]["Default"] = instance_type
                 else:
                     logger.info("No worker_instance_type detected")
                 if "rds_instance_type" in self.STAGE_NAMES_AND_CONFIGS[self.stage_name]:
                     rds_instance_type = self.STAGE_NAMES_AND_CONFIGS[self.stage_name]["rds_instance_type"]
                     logger.info("Updating templates to use {} as rds instance type from class attribute".format(
                         rds_instance_type))
-                    self.templates_dict["cluster"]["Resources"]["DBInstance"]["DBInstanceClass"] = rds_instance_type
+                    self.templates_dict[Labels.cluster_label]["Resources"]["DBInstance"]["DBInstanceClass"] = rds_instance_type
                 else:
                     logger.info("No rds_instance_type detected")
                 if "max_spot_price" in self.STAGE_NAMES_AND_CONFIGS[self.stage_name]:
                     max_spot_price = self.STAGE_NAMES_AND_CONFIGS[self.stage_name]["max_spot_price"]
                     logger.info("Updating templates to use spot price {}".format(max_spot_price))
-                    self.templates_dict["workerset"]["Resources"]["LaunchConfiguration"]["Properties"][
+                    self.templates_dict[Labels.workerset_label]["Resources"]["LaunchConfiguration"]["Properties"][
                         "SpotPrice"] = max_spot_price
                 else:
                     logger.info('No max_spot_price not detected')
@@ -156,35 +168,35 @@ class UpdateTemplates:
     def _add_outputs_for_dashboards(self):
         """ returns the parameters needed for the dashboard to be added"""
         # return a dict of the output keys used
-        self.templates_dict['cluster']['Outputs'].update(
+        self.templates_dict[Labels.cluster_label]['Outputs'].update(
             {'SQSTaskQueueName': {'Value': {'Fn::GetAtt': ['TaskQueue', 'QueueName']}}}
         )
-        self.templates_dict['workerset']['Outputs'].update(
+        self.templates_dict[Labels.workerset_label]['Outputs'].update(
             {'TurbineStackName': {'Value': {'Ref': 'AWS::StackName'}}}
         )
         # Add outputs to individual stacks
-        self.templates_dict['scheduler']['Outputs'].update(
+        self.templates_dict[Labels.scheduler_label]['Outputs'].update(
             {'EC2AutoScalingGroupName': {'Value': {'Ref': 'AutoScalingGroup'}}}
         )
-        self.templates_dict['webserver']['Outputs'].update(
+        self.templates_dict[Labels.webserver_label]['Outputs'].update(
             {'EC2AutoScalingGroupName': {'Value': {'Ref': 'AutoScalingGroup'}}}
         )
-        self.templates_dict['workerset']['Outputs'].update(
+        self.templates_dict[Labels.workerset_label]['Outputs'].update(
             {'EC2AutoScalingGroupName': {'Value': {'Ref': 'AutoScalingGroup'}}}
         )
         # pass them through to cluster stack so it's available at top level
-        self.templates_dict['cluster']['Outputs'].update(
+        self.templates_dict[Labels.cluster_label]['Outputs'].update(
             {'TurbineStackName': {'Value': {'Fn::GetAtt': ['WorkerSetStack', 'Outputs.TurbineStackName']}}}
         )
-        self.templates_dict['cluster']['Outputs'].update(
+        self.templates_dict[Labels.cluster_label]['Outputs'].update(
             {'EC2AutoScalingGroupName': {
                 'Value': {'Fn::GetAtt': ['SchedulerStack', 'Outputs.EC2AutoScalingGroupName']}}}
         )
-        self.templates_dict['cluster']['Outputs'].update(
+        self.templates_dict[Labels.cluster_label]['Outputs'].update(
             {'EC2AutoScalingGroupNameWebserver': {
                 'Value': {'Fn::GetAtt': ['WebserverStack', 'Outputs.EC2AutoScalingGroupName']}}}
         )
-        self.templates_dict['cluster']['Outputs'].update(
+        self.templates_dict[Labels.cluster_label]['Outputs'].update(
             {'EC2AutoScalingGroupNameWorker': {
                 'Value': {'Fn::GetAtt': ['WorkerSetStack', 'Outputs.EC2AutoScalingGroupName']}}}
         )
@@ -345,7 +357,7 @@ class UpdateTemplates:
             add_keys_list = []
             resource_params = None
 
-        existing_keys_lists = self.templates_dict['master']['Parameters'].keys()
+        existing_keys_lists = self.templates_dict[Labels.master_label]['Parameters'].keys()
 
         overlapped_keys = [new_key for new_key in existing_keys_lists if new_key in add_keys_list]
         if len(overlapped_keys):
@@ -361,7 +373,7 @@ class UpdateTemplates:
         template_url = {'Fn::Join': ['', [{'Fn::Sub': 'https://${QSS3BucketName}.s3.amazonaws.com/'},
                                           {'Ref': 'QSS3KeyPrefix'}, template_path_s3]]}
 
-        self.templates_dict['master']['Parameters'] = {**self.templates_dict['master']['Parameters'],
+        self.templates_dict[Labels.master_label]['Parameters'] = {**self.templates_dict[Labels.master_label]['Parameters'],
                                                        **template_params}
         if resource_params:
             resource_add = {sub_stack_name: {'Type': 'AWS::CloudFormation::Stack',
@@ -371,7 +383,7 @@ class UpdateTemplates:
             resource_add = {sub_stack_name: {'Type': 'AWS::CloudFormation::Stack',
                                              'Properties': {'TemplateURL': template_url}}}
 
-        self.templates_dict['master']['Resources'].update(resource_add)
+        self.templates_dict[Labels.master_label]['Resources'].update(resource_add)
 
     def update_templates(self, additional_template_path=None):
         self.add_policies()
@@ -416,14 +428,14 @@ class UpdateTemplates:
             },
             "DeletionPolicy": "Retain"
         }
-        self.templates_dict["master"]["Resources"]["CloudTrailLogsBucket"] = cloudtrail_bucket_dict
+        self.templates_dict[Labels.master_label]["Resources"]["CloudTrailLogsBucket"] = cloudtrail_bucket_dict
 
         policy_path = os.path.join(os.path.dirname(os.path.realpath(__file__)),
                                    "cloudtrail/policies/cloudtrail_logs_bucket_policy.json")
         with open(policy_path) as infile:
             cloudtrail_policy = json.loads(infile.read())
 
-        self.templates_dict["master"]["Resources"]["CloudTrailLogsBucketPolicy"] = {
+        self.templates_dict[Labels.master_label]["Resources"]["CloudTrailLogsBucketPolicy"] = {
             "Type": "AWS::S3::BucketPolicy",
             "Properties": {
                 "Bucket": {"Ref": "CloudTrailLogsBucket"},
@@ -431,7 +443,7 @@ class UpdateTemplates:
             }
         }
 
-        self.templates_dict["master"]["Resources"]["CloudTrail"] = {
+        self.templates_dict[Labels.master_label]["Resources"]["CloudTrail"] = {
             "Type": "AWS::CloudTrail::Trail",
             "Properties": {
                 "IsLogging": True,

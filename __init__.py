@@ -1,2 +1,2 @@
-from .update_yaml_templates import UpdateTemplates
+from .update_yaml_templates import UpdateTemplates, LoadBalancerTemplate
 

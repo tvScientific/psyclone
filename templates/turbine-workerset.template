@@ -284,7 +284,7 @@ Resources:
             Statement:
               - Effect: Allow
                 Action:
-                  - cloudformation:DescribeStackResource
+                  - cloudformation:DescribeStack*
                 Resource: !Join
                   - ':'
                   - - arn:aws:cloudformation

@@ -20,7 +20,7 @@ AWS_ACCOUNT_ID=$(jsonvar "$EC2_DOCUMENT" accountId)
 EC2_INSTANCE_ID=$(jsonvar "$EC2_DOCUMENT" instanceId)
 export AWS_DEFAULT_REGION AWS_REGION AWS_ACCOUNT_ID EC2_INSTANCE_ID
 
-AUTO_SCALING_GROUP_NAME=$(aws cloudformation describe-stacks --stack-name "${AWS_STACK_NAME}" | jq '.Stacks[].Outputs[] | select(.OutputKey|test("AutoScalingGroupName")) | .OutputValue')
+AUTO_SCALING_GROUP_NAME=$(aws cloudformation describe-stacks --stack-name "${AWS_STACK_NAME}" | jq '.Stacks[].Outputs[0] | select(.OutputKey|test("AutoScalingGroup")) | .OutputValue')
 SHUTDOWN_LIFECYCLE_NAME=$(aws cloudformation describe-stacks --stack-name "${AWS_STACK_NAME}" | jq '.Stacks[].Outputs[] | select(.OutputKey|test("GracefulShutdownLifecycleHook")) | .OutputValue')
 export AUTO_SCALING_GROUP_NAME
 export SHUTDOWN_LIFECYCLE_NAME

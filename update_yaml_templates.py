@@ -68,6 +68,8 @@ class UpdateTemplates:
         self._load_templates()
         self.random_string = self._random_generator()
         self.project_name = project_name
+        dashboard_policies_path = os.path.join(os.path.dirname(os.path.realpath(__file__)), "dashboards", "policies")
+        self.add_policies(dashboard_policies_path)
         if 'PROD' in stage_name:
             self.add_cloudtrail()
         if load_balancer:
@@ -403,8 +405,6 @@ class UpdateTemplates:
         """
         outputs = self._add_outputs_for_dashboards()
         self.add_instance_and_autoscaling_group_metrics()
-        dashboard_policies_path = os.path.join(os.path.dirname(os.path.realpath(__file__)), "dashboards", "policies")
-        self.add_policies(dashboard_policies_path)
         dashboard = DativaDashboardTemplate(
             self.project_name,
             stage_name=stage_name,

@@ -6,7 +6,8 @@
             "Effect": "Allow",
             "Action": [
                 "autoscaling:DescribeAutoScalingInstances",
-                "autoscaling:DescribeTags"
+                "autoscaling:DescribeTags",
+                "autoscaling:DescribeScalingActivities"
             ],
             "Resource": "*"
         }

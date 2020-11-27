@@ -51,7 +51,7 @@ class UpdateTemplates:
 
     # better names
     def __init__(self, templates_path, policies_base_path, updated_templates_path, stage_name, project_name,
-                 region=None, load_balancer=False):
+                 region=None, load_balancer=False, route_53=True):
         self.templates_path = templates_path
         self.policies_base_path = policies_base_path
         self.updated_templates_path = updated_templates_path
@@ -72,12 +72,13 @@ class UpdateTemplates:
         self.add_policies(dashboard_policies_path)
         if 'PROD' in stage_name:
             self.add_cloudtrail()
+        self.route_53 = route_53
         if load_balancer:
             if region is None:
                 raise ValueError('Region is required to deploy a load balancer')
             loadbalancer_class = LoadBalancerTemplate(
                 stage_name, region, self.DOMAIN, self.random_string, project_name, self.PRODLIKE_STACKS,
-                self.ALLOWED_STAGES)
+                self.ALLOWED_STAGES, self.route_53)
             loadbalancer_and_routing = loadbalancer_class.loadbalancer_and_routing()
             cfs_path = loadbalancer_class.write_to_file("loadbalancer-and-routing-stack",
                                                         loadbalancer_and_routing)
@@ -455,7 +456,8 @@ class UpdateTemplates:
 
 class LoadBalancerTemplate:
 
-    def __init__(self, stage_name, region, domain, random_string, project_name, prod_like_stacks, allowed_stages):
+    def __init__(self, stage_name, region, domain, random_string, project_name, prod_like_stacks, allowed_stages,
+                 route_53=True):
         self._project_name = project_name
         self._project_name_alphanum = project_name.replace("-", "").replace("_", "")
         self._basepath = "./unpackaged-templates/"
@@ -482,37 +484,12 @@ class LoadBalancerTemplate:
         self.domain = domain
         self.alias = "{}.{}".format(self.stage_name_subdomain_mapping[self._stage_name], self.domain)
         self.random_string = random_string
-
-    @staticmethod
-    def _get_custom_error_responses():
-        return [
-            cloudfront.CustomErrorResponse(
-                ErrorCachingMinTTL=300,
-                ErrorCode=403,
-                ResponseCode=200,
-                ResponsePagePath="/index.html"
-            ),
-            cloudfront.CustomErrorResponse(
-                ErrorCachingMinTTL=300,
-                ErrorCode=404,
-                ResponseCode=200,
-                ResponsePagePath="/index.html"
-            ),
-        ]
-
-    def _get_bucket_encryption_config(self):
-        encryption_config = s3.BucketEncryption(
-            ServerSideEncryptionConfiguration=[s3.ServerSideEncryptionRule(
-                ServerSideEncryptionByDefault=s3.ServerSideEncryptionByDefault(
-                    SSEAlgorithm='AES'
-                )
-            )]
-        )
-        return encryption_config
+        self.route_53 = route_53
 
     def loadbalancer_and_routing(self):
         t = Template("AWS CloudFormation template:"
-                     " Contains the CloudFront Distributions and appropriate routing to make it work.")
+                     " Contains the Application Load Balancer.")
+
         t.add_parameter(Parameter(
             "SSLCertArn",
             Type="String"))
@@ -685,18 +662,19 @@ class LoadBalancerTemplate:
             ]
         ))
 
-        hosted_zone_name = self.domain + "."
-        t.add_resource(
-            route53.RecordSetType(
-                "CloudFrontDistributionToEC2{}".format(self.current_mapping_vals["CamelNoSepStage"]),
-                HostedZoneName=hosted_zone_name,
-                Comment="CNAME redirect to aws.amazon.com.",
-                Name=self.alias,
-                Type="CNAME",
-                TTL="300",
-                ResourceRecords=[GetAtt(load_balancer, "DNSName")],
+        if self.route_53:
+            hosted_zone_name = self.domain + "."
+            t.add_resource(
+                route53.RecordSetType(
+                    "CloudFrontDistributionToEC2{}".format(self.current_mapping_vals["CamelNoSepStage"]),
+                    HostedZoneName=hosted_zone_name,
+                    Comment="CNAME redirect to aws.amazon.com.",
+                    Name=self.alias,
+                    Type="CNAME",
+                    TTL="300",
+                    ResourceRecords=[GetAtt(load_balancer, "DNSName")],
+                )
             )
-        )
         t.add_output(Output(
             Labels.target_group_arns_for_autoscaling,
             Value=Ref(webserver_target_group),

@@ -483,36 +483,10 @@ class LoadBalancerTemplate:
         self.alias = "{}.{}".format(self.stage_name_subdomain_mapping[self._stage_name], self.domain)
         self.random_string = random_string
 
-    @staticmethod
-    def _get_custom_error_responses():
-        return [
-            cloudfront.CustomErrorResponse(
-                ErrorCachingMinTTL=300,
-                ErrorCode=403,
-                ResponseCode=200,
-                ResponsePagePath="/index.html"
-            ),
-            cloudfront.CustomErrorResponse(
-                ErrorCachingMinTTL=300,
-                ErrorCode=404,
-                ResponseCode=200,
-                ResponsePagePath="/index.html"
-            ),
-        ]
-
-    def _get_bucket_encryption_config(self):
-        encryption_config = s3.BucketEncryption(
-            ServerSideEncryptionConfiguration=[s3.ServerSideEncryptionRule(
-                ServerSideEncryptionByDefault=s3.ServerSideEncryptionByDefault(
-                    SSEAlgorithm='AES'
-                )
-            )]
-        )
-        return encryption_config
-
-    def loadbalancer_and_routing(self):
+    def loadbalancer_and_routing(self, route_53=True):
         t = Template("AWS CloudFormation template:"
-                     " Contains the CloudFront Distributions and appropriate routing to make it work.")
+                     " Contains the Application Load Balancer.")
+
         t.add_parameter(Parameter(
             "SSLCertArn",
             Type="String"))
@@ -685,18 +659,19 @@ class LoadBalancerTemplate:
             ]
         ))
 
-        hosted_zone_name = self.domain + "."
-        t.add_resource(
-            route53.RecordSetType(
-                "CloudFrontDistributionToEC2{}".format(self.current_mapping_vals["CamelNoSepStage"]),
-                HostedZoneName=hosted_zone_name,
-                Comment="CNAME redirect to aws.amazon.com.",
-                Name=self.alias,
-                Type="CNAME",
-                TTL="300",
-                ResourceRecords=[GetAtt(load_balancer, "DNSName")],
+        if route_53:
+            hosted_zone_name = self.domain + "."
+            t.add_resource(
+                route53.RecordSetType(
+                    "CloudFrontDistributionToEC2{}".format(self.current_mapping_vals["CamelNoSepStage"]),
+                    HostedZoneName=hosted_zone_name,
+                    Comment="CNAME redirect to aws.amazon.com.",
+                    Name=self.alias,
+                    Type="CNAME",
+                    TTL="300",
+                    ResourceRecords=[GetAtt(load_balancer, "DNSName")],
+                )
             )
-        )
         t.add_output(Output(
             Labels.target_group_arns_for_autoscaling,
             Value=Ref(webserver_target_group),

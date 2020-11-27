@@ -51,7 +51,7 @@ class UpdateTemplates:
 
     # better names
     def __init__(self, templates_path, policies_base_path, updated_templates_path, stage_name, project_name,
-                 region=None, load_balancer=False):
+                 region=None, load_balancer=False, route_53=True):
         self.templates_path = templates_path
         self.policies_base_path = policies_base_path
         self.updated_templates_path = updated_templates_path
@@ -72,6 +72,7 @@ class UpdateTemplates:
         self.add_policies(dashboard_policies_path)
         if 'PROD' in stage_name:
             self.add_cloudtrail()
+        self.route_53 = route_53
         if load_balancer:
             if region is None:
                 raise ValueError('Region is required to deploy a load balancer')
@@ -455,7 +456,8 @@ class UpdateTemplates:
 
 class LoadBalancerTemplate:
 
-    def __init__(self, stage_name, region, domain, random_string, project_name, prod_like_stacks, allowed_stages):
+    def __init__(self, stage_name, region, domain, random_string, project_name, prod_like_stacks, allowed_stages,
+                 route_53=True):
         self._project_name = project_name
         self._project_name_alphanum = project_name.replace("-", "").replace("_", "")
         self._basepath = "./unpackaged-templates/"
@@ -483,7 +485,7 @@ class LoadBalancerTemplate:
         self.alias = "{}.{}".format(self.stage_name_subdomain_mapping[self._stage_name], self.domain)
         self.random_string = random_string
 
-    def loadbalancer_and_routing(self, route_53=True):
+    def loadbalancer_and_routing(self):
         t = Template("AWS CloudFormation template:"
                      " Contains the Application Load Balancer.")
 
@@ -659,7 +661,7 @@ class LoadBalancerTemplate:
             ]
         ))
 
-        if route_53:
+        if self.route_53:
             hosted_zone_name = self.domain + "."
             t.add_resource(
                 route53.RecordSetType(

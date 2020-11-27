@@ -338,7 +338,7 @@ class UpdateTemplates:
                     self.templates_dict[template_name]['Resources']['IamRole']['Properties'][
                         'ManagedPolicyArns'] += arn_list
 
-    def add_template(self, additional_template_path, parameters_and_vals={}):
+    def add_template(self, additional_template_path, parameters_and_vals=(), allowed_overlap=()):
 
         with open(additional_template_path) as template_file:
             # Load yaml used for now but this can be changed if need be
@@ -346,10 +346,10 @@ class UpdateTemplates:
 
         if 'Parameters' in additional_template.keys():
             template_params = {key: value for key, value in additional_template['Parameters'].items() if
-                               key not in parameters_and_vals.keys()}
+                               key not in parameters_and_vals}
             add_keys_list = additional_template['Parameters'].keys()
             resource_params = {param: {'Ref': param} for param in additional_template['Parameters'].keys() if
-                               param not in parameters_and_vals.keys()}
+                               param not in parameters_and_vals}
 
             resource_params = {**resource_params, **parameters_and_vals}
 
@@ -362,7 +362,12 @@ class UpdateTemplates:
 
         existing_keys_lists = self.templates_dict[Labels.master_label]['Parameters'].keys()
 
-        overlapped_keys = [new_key for new_key in existing_keys_lists if new_key in add_keys_list]
+        overlapped_keys = [
+            new_key for new_key in existing_keys_lists if (
+                new_key in add_keys_list and
+                new_key not in allowed_overlap
+            )
+        ]
         if len(overlapped_keys):
             raise KeyError(
                 'There is an overlap in parameters between the additional template and the master template. {}'.format(

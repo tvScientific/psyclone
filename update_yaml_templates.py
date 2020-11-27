@@ -484,6 +484,7 @@ class LoadBalancerTemplate:
         self.domain = domain
         self.alias = "{}.{}".format(self.stage_name_subdomain_mapping[self._stage_name], self.domain)
         self.random_string = random_string
+        self.route_53 = route_53
 
     def loadbalancer_and_routing(self):
         t = Template("AWS CloudFormation template:"

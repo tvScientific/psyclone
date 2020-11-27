@@ -78,7 +78,7 @@ class UpdateTemplates:
                 raise ValueError('Region is required to deploy a load balancer')
             loadbalancer_class = LoadBalancerTemplate(
                 stage_name, region, self.DOMAIN, self.random_string, project_name, self.PRODLIKE_STACKS,
-                self.ALLOWED_STAGES)
+                self.ALLOWED_STAGES, self.route_53)
             loadbalancer_and_routing = loadbalancer_class.loadbalancer_and_routing()
             cfs_path = loadbalancer_class.write_to_file("loadbalancer-and-routing-stack",
                                                         loadbalancer_and_routing)

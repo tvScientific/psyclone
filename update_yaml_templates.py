@@ -514,6 +514,35 @@ class LoadBalancerTemplate:
             Description="VPC S3 endpoint ID for use in the loadbalancer to log to"
         ))
 
+        # This list is from https://docs.aws.amazon.com/elasticloadbalancing/latest/application/load-balancer-access-logs.html
+        region_elb_account_dict = {
+            'us-east-1': 127311923021,            # 'US East (N. Virginia)'},
+            'us-east-2': 33677994240,             # 'US East (Ohio)'},
+            'us-west-1': 27434742980,             # 'US West (N. California)'},
+            'us-west-2': 797873946194,            # 'US West (Oregon)'},
+            'af-south-1': 98369216593,            # 'Africa (Cape Town)'},
+            'ca-central-1': 985666609251,         # 'Canada (Central)'},
+            'eu-central-1': 54676820928,          # 'Europe (Frankfurt)'},
+            'eu-west-1': 156460612806,            # 'Europe (Ireland)'},
+            'eu-west-2': 652711504416,            # 'Europe (London)'},
+            'eu-south-1': 635631232127,           # 'Europe (Milan)'},
+            'eu-west-3': 9996457667,              # 'Europe (Paris)'},
+            'eu-north-1': 897822967062,           # 'Europe (Stockholm)'},
+            'ap-east-1': 754344448648,            # 'Asia Pacific (Hong Kong)'},
+            'ap-northeast-1': 582318560864,       # 'Asia Pacific (Tokyo)'},
+            'ap-northeast-2': 600734575887,       # 'Asia Pacific (Seoul)'},
+            'ap-northeast-3': 383597477331,       # 'Asia Pacific (Osaka-Local)'},
+            'ap-southeast-1': 114774131450,       # 'Asia Pacific (Singapore)'},
+            'ap-southeast-2': 783225319266,       # 'Asia Pacific (Sydney)'},
+            'ap-south-1': 718504428378,           # 'Asia Pacific (Mumbai)'},
+            'me-south-1': 76674570225,            # 'Middle East (Bahrain)'},
+            'sa-east-1': 507241528517,            # 'South America (São Paulo)'},
+            'us-gov-west-1*': 48591011584,        # 'AWS GovCloud (US-West)'},
+            'us-gov-east-1*': 190560391635,       # 'AWS GovCloud (US-East)'},
+            'cn-north-1*': 638102146993,          # 'China (Beijing)'},
+            'cn-northwest-1*': 37604701340,       # 'China (Ningxia)'
+        }
+        elb_account_id = region_elb_account_dict[self._region]
         # define application load balancer here
         load_balancer = "LoadBalancer"
         webserver_target_group = "WebserverTargetGroup"
@@ -593,7 +622,7 @@ class LoadBalancerTemplate:
                             Sid="AWSConsoleStmt-1592839844977",
                             Effect="Allow",
                             Principal=Principal(
-                                "AWS", "arn:aws:iam::127311923021:root"
+                                "AWS", "arn:aws:iam::{}:root".format(elb_account_id)
                             ),
                             Action=[Action("s3", "PutObject")],
                             Resource=[Join("/", [GetAtt(loadbalancer_bucket_logical_id, "Arn"), "*"])]

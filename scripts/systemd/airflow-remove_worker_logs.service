@@ -1,0 +1,4 @@
+[Service]
+EnvironmentFile=/etc/sysconfig/airflow.env
+Type=oneshot
+ExecStart=/opt/turbine/airflow-remove_worker_logs.sh

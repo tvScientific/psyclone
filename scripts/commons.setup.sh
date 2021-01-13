@@ -22,6 +22,8 @@ export AWS_DEFAULT_REGION AWS_REGION AWS_ACCOUNT_ID EC2_INSTANCE_ID
 
 AUTO_SCALING_GROUP_NAME=$(aws cloudformation describe-stacks --stack-name "${AWS_STACK_NAME}" | jq '.Stacks[].Outputs[0] | select(.OutputKey|test("AutoScalingGroup")) | .OutputValue')
 SHUTDOWN_LIFECYCLE_NAME=$(aws cloudformation describe-stacks --stack-name "${AWS_STACK_NAME}" | jq '.Stacks[].Outputs[] | select(.OutputKey|test("GracefulShutdownLifecycleHook")) | .OutputValue')
+REMOVE_LOGS_OLDER_THAN_X_DAYS=2
+export REMOVE_LOGS_OLDER_THAN_X_DAYS
 export AUTO_SCALING_GROUP_NAME
 export SHUTDOWN_LIFECYCLE_NAME
 

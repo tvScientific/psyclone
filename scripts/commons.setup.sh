@@ -69,6 +69,7 @@ FERNET_KEY=$(python3 -c "if True:#
     print(key_encoded.decode('utf8'))")
 export FERNET_KEY
 
+
 FILES=$(dirname "$0")
 find "$FILES" -type f -iname "*.sh" -exec chmod +x {} \;
 envreplace() { CONTENT=$(envsubst <"$1"); echo "$CONTENT" >"$1"; }

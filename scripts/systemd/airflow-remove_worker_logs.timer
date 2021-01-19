@@ -1,0 +1,5 @@
+[Timer]
+OnCalendar=*-*-* 00:00:00
+
+[Install]
+RequiredBy=airflow-workerset.service

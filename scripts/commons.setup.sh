@@ -69,13 +69,6 @@ FERNET_KEY=$(python3 -c "if True:#
     print(key_encoded.decode('utf8'))")
 export FERNET_KEY
 
-pip3 install configparser
-REMOVE_LOGS_OLDER_THAN_X_DAYS=$(python3 -c "if True:#
-    from configparser import ConfigParser
-    cfg = ConfigParser()
-    cfg.read('/airflow/airflow.cfg')
-    print(cfg.get('deductive_custom', 'rm_worker_logs_older_than_x_days'))")
-export REMOVE_LOGS_OLDER_THAN_X_DAYS
 
 FILES=$(dirname "$0")
 find "$FILES" -type f -iname "*.sh" -exec chmod +x {} \;

@@ -137,14 +137,16 @@ class UpdateTemplates:
                     instance_type = self.STAGE_NAMES_AND_CONFIGS[self.stage_name]["worker_instance_type"]
                     logger.info("Updating templates to use {} as worker instance type from class attribute".format(
                         instance_type))
-                    self.templates_dict[Labels.master_label]["Parameters"]["WorkerInstanceType"]["Default"] = instance_type
+                    self.templates_dict[Labels.master_label]["Parameters"]["WorkerInstanceType"][
+                        "Default"] = instance_type
                 else:
                     logger.info("No worker_instance_type detected")
                 if "rds_instance_type" in self.STAGE_NAMES_AND_CONFIGS[self.stage_name]:
                     rds_instance_type = self.STAGE_NAMES_AND_CONFIGS[self.stage_name]["rds_instance_type"]
                     logger.info("Updating templates to use {} as rds instance type from class attribute".format(
                         rds_instance_type))
-                    self.templates_dict[Labels.cluster_label]["Resources"]["DBInstance"]["DBInstanceClass"] = rds_instance_type
+                    self.templates_dict[Labels.cluster_label]["Resources"]["DBInstance"][
+                        "DBInstanceClass"] = rds_instance_type
                 else:
                     logger.info("No rds_instance_type detected")
                 if "max_spot_price" in self.STAGE_NAMES_AND_CONFIGS[self.stage_name]:
@@ -338,7 +340,9 @@ class UpdateTemplates:
                     self.templates_dict[template_name]['Resources']['IamRole']['Properties'][
                         'ManagedPolicyArns'] += arn_list
 
-    def add_template(self, additional_template_path, parameters_and_vals=(), allowed_overlap=()):
+    def add_template(self, additional_template_path, parameters_and_vals=None, allowed_overlap=()):
+
+        parameters_and_vals = {} if parameters_and_vals is None else parameters_and_vals
 
         with open(additional_template_path) as template_file:
             # Load yaml used for now but this can be changed if need be
@@ -364,8 +368,8 @@ class UpdateTemplates:
 
         overlapped_keys = [
             new_key for new_key in existing_keys_lists if (
-                new_key in add_keys_list and
-                new_key not in allowed_overlap
+                    new_key in add_keys_list and
+                    new_key not in allowed_overlap
             )
         ]
         if len(overlapped_keys):
@@ -381,8 +385,9 @@ class UpdateTemplates:
         template_url = {'Fn::Join': ['', [{'Fn::Sub': 'https://${QSS3BucketName}.s3.amazonaws.com/'},
                                           {'Ref': 'QSS3KeyPrefix'}, template_path_s3]]}
 
-        self.templates_dict[Labels.master_label]['Parameters'] = {**self.templates_dict[Labels.master_label]['Parameters'],
-                                                       **template_params}
+        self.templates_dict[Labels.master_label]['Parameters'] = {
+            **self.templates_dict[Labels.master_label]['Parameters'],
+            **template_params}
         if resource_params:
             resource_add = {sub_stack_name: {'Type': 'AWS::CloudFormation::Stack',
                                              'Properties': {'TemplateURL': template_url,
@@ -516,31 +521,31 @@ class LoadBalancerTemplate:
 
         # This list is from https://docs.aws.amazon.com/elasticloadbalancing/latest/application/load-balancer-access-logs.html
         region_elb_account_dict = {
-            'us-east-1': 127311923021,            # 'US East (N. Virginia)'},
-            'us-east-2': 33677994240,             # 'US East (Ohio)'},
-            'us-west-1': 27434742980,             # 'US West (N. California)'},
-            'us-west-2': 797873946194,            # 'US West (Oregon)'},
-            'af-south-1': 98369216593,            # 'Africa (Cape Town)'},
-            'ca-central-1': 985666609251,         # 'Canada (Central)'},
-            'eu-central-1': 54676820928,          # 'Europe (Frankfurt)'},
-            'eu-west-1': 156460612806,            # 'Europe (Ireland)'},
-            'eu-west-2': 652711504416,            # 'Europe (London)'},
-            'eu-south-1': 635631232127,           # 'Europe (Milan)'},
-            'eu-west-3': 9996457667,              # 'Europe (Paris)'},
-            'eu-north-1': 897822967062,           # 'Europe (Stockholm)'},
-            'ap-east-1': 754344448648,            # 'Asia Pacific (Hong Kong)'},
-            'ap-northeast-1': 582318560864,       # 'Asia Pacific (Tokyo)'},
-            'ap-northeast-2': 600734575887,       # 'Asia Pacific (Seoul)'},
-            'ap-northeast-3': 383597477331,       # 'Asia Pacific (Osaka-Local)'},
-            'ap-southeast-1': 114774131450,       # 'Asia Pacific (Singapore)'},
-            'ap-southeast-2': 783225319266,       # 'Asia Pacific (Sydney)'},
-            'ap-south-1': 718504428378,           # 'Asia Pacific (Mumbai)'},
-            'me-south-1': 76674570225,            # 'Middle East (Bahrain)'},
-            'sa-east-1': 507241528517,            # 'South America (São Paulo)'},
-            'us-gov-west-1*': 48591011584,        # 'AWS GovCloud (US-West)'},
-            'us-gov-east-1*': 190560391635,       # 'AWS GovCloud (US-East)'},
-            'cn-north-1*': 638102146993,          # 'China (Beijing)'},
-            'cn-northwest-1*': 37604701340,       # 'China (Ningxia)'
+            'us-east-1': 127311923021,  # 'US East (N. Virginia)'},
+            'us-east-2': 33677994240,  # 'US East (Ohio)'},
+            'us-west-1': 27434742980,  # 'US West (N. California)'},
+            'us-west-2': 797873946194,  # 'US West (Oregon)'},
+            'af-south-1': 98369216593,  # 'Africa (Cape Town)'},
+            'ca-central-1': 985666609251,  # 'Canada (Central)'},
+            'eu-central-1': 54676820928,  # 'Europe (Frankfurt)'},
+            'eu-west-1': 156460612806,  # 'Europe (Ireland)'},
+            'eu-west-2': 652711504416,  # 'Europe (London)'},
+            'eu-south-1': 635631232127,  # 'Europe (Milan)'},
+            'eu-west-3': 9996457667,  # 'Europe (Paris)'},
+            'eu-north-1': 897822967062,  # 'Europe (Stockholm)'},
+            'ap-east-1': 754344448648,  # 'Asia Pacific (Hong Kong)'},
+            'ap-northeast-1': 582318560864,  # 'Asia Pacific (Tokyo)'},
+            'ap-northeast-2': 600734575887,  # 'Asia Pacific (Seoul)'},
+            'ap-northeast-3': 383597477331,  # 'Asia Pacific (Osaka-Local)'},
+            'ap-southeast-1': 114774131450,  # 'Asia Pacific (Singapore)'},
+            'ap-southeast-2': 783225319266,  # 'Asia Pacific (Sydney)'},
+            'ap-south-1': 718504428378,  # 'Asia Pacific (Mumbai)'},
+            'me-south-1': 76674570225,  # 'Middle East (Bahrain)'},
+            'sa-east-1': 507241528517,  # 'South America (São Paulo)'},
+            'us-gov-west-1*': 48591011584,  # 'AWS GovCloud (US-West)'},
+            'us-gov-east-1*': 190560391635,  # 'AWS GovCloud (US-East)'},
+            'cn-north-1*': 638102146993,  # 'China (Beijing)'},
+            'cn-northwest-1*': 37604701340,  # 'China (Ningxia)'
         }
         elb_account_id = region_elb_account_dict[self._region]
         # define application load balancer here
@@ -590,7 +595,8 @@ class LoadBalancerTemplate:
         t.add_resource(sg)
 
         if self._prod_like_logical:
-            bucket_name = Join("-", [self._project_name, "load-balancer-logging-bucket", AccountId, self._stage_name.lower()])
+            bucket_name = Join("-", [self._project_name, "load-balancer-logging-bucket", AccountId,
+                                     self._stage_name.lower()])
             bucket_prefix = "application-load-balancer-logs/data-ingest-reporting/{}".format(self._stage_name.lower())
             load_balancer_attributes = [
                 elasticloadbalancingv2.LoadBalancerAttributes(

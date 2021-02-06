@@ -7,14 +7,16 @@ import random
 import string
 import sys
 
+import boto3
 from awacs.aws import PolicyDocument, Statement, Principal, Action, Condition, StringEquals
 from cfn_tools import load_yaml, dump_yaml
-from troposphere import Ref, Parameter, Template, Output, Join, GetAtt, Split, NoValue, AccountId
-from troposphere import cloudfront
+from troposphere import Ref, Parameter, Template, Output, Join, GetAtt, Split, NoValue, AccountId, Sub
+from troposphere import cloudformation
 from troposphere import ec2
 from troposphere import elasticloadbalancingv2
 from troposphere import route53
 from troposphere import s3
+from troposphere import sqs
 
 from psyclone.dashboards.dativa_dashboard_template import DativaDashboardTemplate
 
@@ -52,6 +54,7 @@ class UpdateTemplates:
     # better names
     def __init__(self, templates_path, policies_base_path, updated_templates_path, stage_name, project_name,
                  region=None, load_balancer=False, route_53=True):
+        self._cf = boto3.client("cloudformation")
         self.templates_path = templates_path
         self.policies_base_path = policies_base_path
         self.updated_templates_path = updated_templates_path
@@ -232,23 +235,9 @@ class UpdateTemplates:
             "\n",
             "\n",
             "function getMetric {\n",
-            "  # Always return bytes\n",
-            "  if [ \"\$1\" == \"DiskTotal\" ]; then\n",
-            "    total=\$(df / | awk '/dev/ {print \$2}')\n",
-            "    echo \$(( \$total*1000 ))\n",
-            "  elif [ \"\$1\" == \"DiskUsed\" ]; then\n",
-            "    used=\$(df / | awk '/dev/ {print \$3}')\n",
-            "    echo \$(( \$used*1000 ))\n",
-            "  elif [ \"\$1\" == \"DiskFree\" ]; then\n",
+            "  if [ \"\$1\" == \"DiskFree\" ]; then\n",
             "    free=\$(df / | awk '/dev/ {print \$4}')\n",
             "    echo \$(( \$free*1000 ))\n",
-            "  elif [ \"\$1\" == \"MemTotal\" ]; then\n",
-            "    free -b | awk '/Mem:/ {print \$2}'\n",
-            "  elif [ \"\$1\" == \"MemUsed\" ]; then\n",
-            "    used=\$(free -b | awk '/Mem:/ {print \$3}')\n",
-            "    shared=\$(free -b | awk '/Mem:/ {print \$5}')\n",
-            "    buff=\$(free -b | awk '/Mem:/ {print \$6}')\n",
-            "    echo \$((\$used + \$shared + \$buff))\n",
             "  elif [ \"\$1\" == \"MemFree\" ]; then\n",
             "    free -b | awk '/Mem:/ {print \$4}'\n",
             "  elif [ \"\$1\" == \"CPUUsage\" ]; then\n",
@@ -257,17 +246,9 @@ class UpdateTemplates:
             "}\n",
             "\n",
             "# Disk usage metrics\n",
-            # "data=\$( getMetric DiskTotal )\n",
-            # "aws cloudwatch put-metric-data --value \$data --namespace Deductive/AutoScalingGroup/Instance --unit Bytes --metric-name DiskTotal --dimensions AutoScalingGroup=\$AWSAUTOSCALINGGROUP,Instance=\$AWSINSTANCEID --region  \$AWSREGION\n",
-            # "data=\$( getMetric DiskUsed )\n",
-            # "aws cloudwatch put-metric-data --value \$data --namespace Deductive/AutoScalingGroup/Instance --unit Bytes --metric-name DiskUsed --dimensions AutoScalingGroup=\$AWSAUTOSCALINGGROUP,Instance=\$AWSINSTANCEID --region  \$AWSREGION\n",
             "data=\$( getMetric DiskFree )\n",
             "aws cloudwatch put-metric-data --value \$data --namespace Deductive/AutoScalingGroup/Instance --unit Bytes --metric-name DiskFree --dimensions AutoScalingGroup=\$AWSAUTOSCALINGGROUP,Instance=\$AWSINSTANCEID --region  \$AWSREGION\n",
             "# Memory usage metrics\n",
-            # "data=\$( getMetric MemTotal )\n",
-            # "aws cloudwatch put-metric-data --value \$data --namespace Deductive/AutoScalingGroup/Instance --unit Bytes --metric-name MemTotal --dimensions AutoScalingGroup=\$AWSAUTOSCALINGGROUP,Instance=\$AWSINSTANCEID --region  \$AWSREGION\n",
-            # "data=\$( getMetric MemUsed )\n",
-            # "aws cloudwatch put-metric-data --value \$data --namespace Deductive/AutoScalingGroup/Instance --unit Bytes --metric-name MemUsed --dimensions AutoScalingGroup=\$AWSAUTOSCALINGGROUP,Instance=\$AWSINSTANCEID --region  \$AWSREGION\n",
             "data=\$( getMetric MemFree )\n",
             "aws cloudwatch put-metric-data --value \$data --namespace Deductive/AutoScalingGroup/Instance --unit Bytes --metric-name MemFree --dimensions AutoScalingGroup=\$AWSAUTOSCALINGGROUP,Instance=\$AWSINSTANCEID --region  \$AWSREGION\n",
             "# CPU usage metrics\n",
@@ -306,7 +287,13 @@ class UpdateTemplates:
         for template_name in self.templates_dict.keys():
             with open(os.path.join(self.updated_templates_path,
                                    "turbine-{}.template".format(template_name)), 'w') as outfile:
-                outfile.write(dump_yaml(self.templates_dict[template_name]))
+                val = dump_yaml(self.templates_dict[template_name])
+                if len(val) > 51200:
+                    logger.info("Template {} too long to run validation".format(template_name))
+                else:
+                    validation = self._cf.validate_template(TemplateBody=val)
+                    logger.info(f"{str(validation)} for {template_name}")
+                outfile.write(val)
 
     def add_policies(self, policies_base_path=""):
 
@@ -462,6 +449,50 @@ class UpdateTemplates:
             },
             "DependsOn": ["CloudTrailLogsBucketPolicy"]
         }
+
+    def add_new_workerset(self, instance_type, min_count, max_count, label):
+        """
+        Method adds workerset and queue associated with it, also adds exports for queue names where needed
+        """
+        # Add steps here to ensure that the instance type is supported in the chosen AZs
+
+        sanitized_instance_type = label
+        queue_name = "QueueFor" + sanitized_instance_type
+        queue_thing = sqs.Queue(queue_name, QueueName=self.project_name+self.stage_name+queue_name)
+
+        ws_stack_name = "WorkerSetStack" + sanitized_instance_type
+        ws_stack = cloudformation.Stack(
+            ws_stack_name,
+            TemplateURL=Join(
+                '',
+                [
+                    Sub("https://${QSS3BucketName}.s3.amazonaws.com/", ),
+                    Ref("QSS3KeyPrefix"),
+                    "templates/turbine-workerset.template",
+                ],
+            ),
+            Parameters={
+                "VPCID": Ref("VPCID").to_dict(),
+                "PrivateSubnet1AID": Ref("PrivateSubnet1AID").to_dict(),
+                "PrivateSubnet2AID": Ref("PrivateSubnet2AID").to_dict(),
+                "SecurityGroupID": Ref("InstancesSecurityGroup").to_dict(),
+                "DatabaseSecret": Ref("Secret").to_dict(),
+                "QueueName": GetAtt(queue_name, "QueueName").to_dict(),
+                "LogsBucket": Ref("LogsBucket").to_dict(),
+                "InstanceType": instance_type,
+                "MinGroupSize": min_count,
+                "MaxGroupSize": max_count,
+                "ShrinkThreshold": Ref("ShrinkThreshold").to_dict(),
+                "GrowthThreshold": Ref("GrowthThreshold").to_dict(),
+                "LoadExampleDags": Ref("LoadExampleDags").to_dict(),
+                "LoadDefaultCons": Ref("LoadDefaultCons").to_dict(),
+                "QSS3BucketName": Ref("QSS3BucketName").to_dict(),
+                "QSS3KeyPrefix": Ref("QSS3KeyPrefix").to_dict(),
+            },
+            DependsOn=["SecretTargetAttachment"]
+        )
+        self.templates_dict[Labels.cluster_label]["Resources"].update({queue_name: queue_thing.to_dict()})
+        self.templates_dict[Labels.cluster_label]["Resources"].update({ws_stack_name: ws_stack.to_dict()})
 
 
 class LoadBalancerTemplate:

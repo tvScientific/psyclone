@@ -455,12 +455,12 @@ class UpdateTemplates:
         Method adds workerset and queue associated with it, also adds exports for queue names where needed
         """
         # Add steps here to ensure that the instance type is supported in the chosen AZs
-
-        sanitized_instance_type = label
-        queue_name = "QueueFor" + sanitized_instance_type
+        if not {i for i in label}.issubset({i for i in string.ascii_letters}):
+            raise ValueError("Parameter label must only contain following characters {}".format(string.ascii_letters))
+        queue_name = "QueueFor" + label
         queue_thing = sqs.Queue(queue_name, QueueName=self.project_name+self.stage_name+queue_name)
 
-        ws_stack_name = "WorkerSetStack" + sanitized_instance_type
+        ws_stack_name = "WorkerSetStack" + label
         ws_stack = cloudformation.Stack(
             ws_stack_name,
             TemplateURL=Join(

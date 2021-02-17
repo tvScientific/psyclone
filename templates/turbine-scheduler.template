@@ -257,7 +257,7 @@ Resources:
                   - SchedulerAsWorkerCondition
                   - - !Sub arn:aws:sqs:${AWS::Region}:${AWS::AccountId}:${QueueName}
                     - !Sub arn:aws:sqs:${AWS::Region}:${AWS::AccountId}:${SmallQueueName}
-                  - !Sub arn:aws:sqs:${AWS::Region}:${AWS::AccountId}:${QueueName}
+                  - - !Sub arn:aws:sqs:${AWS::Region}:${AWS::AccountId}:${QueueName}
         - PolicyName: !Sub TurbineAirflowSchedulerLogsRWPolicy-${AWS::StackName}
           PolicyDocument:
             Version: 2012-10-17

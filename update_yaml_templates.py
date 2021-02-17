@@ -24,8 +24,6 @@ logger = logging.getLogger(__name__)
 stdout = logging.StreamHandler(sys.stdout)
 stdout.setFormatter(logging.Formatter('%(message)s'))
 stdout.setLevel(logging.INFO)
-logger.addHandler(stdout)
-logger.setLevel(logging.INFO)
 
 
 class Labels:
@@ -71,7 +69,8 @@ class UpdateTemplates:
         self._load_templates()
         self.random_string = self._random_generator()
         self.project_name = project_name
-        dashboard_policies_path = os.path.join(os.path.dirname(os.path.realpath(__file__)), "dashboards", "policies")
+        self.dir_of_file = os.path.dirname(os.path.realpath(__file__))
+        dashboard_policies_path = os.path.join(self.dir_of_file, "dashboards", "policies")
         self.add_policies(dashboard_policies_path)
         if 'PROD' in stage_name:
             self.add_cloudtrail()
@@ -219,81 +218,87 @@ class UpdateTemplates:
                 "Fn::GetAtt": ["TurbineCluster", "Outputs.EC2AutoScalingGroupNameWorker"]},
         }
 
-    def add_instance_and_autoscaling_group_metrics(self):
-
-        """"""
+    def add_instance_and_autoscaling_group_metrics(self, cluster):
+        """
+        Need a way to do this for all worker types
+        """
         metrics_userdata = [
             # add to this to userdata
-            "aws configure set default.region ${AWS::Region}\n",
-            "cat <<EOF > /usr/local/bin/metricscript.sh\n",
-            "# !/bin/bash\n",
-            "\n",
-            "# Collect region and instanceid from metadata\n",
-            "AWSREGION=\$(curl -ss http://169.254.169.254/latest/dynamic/instance-identity/document | jq -r .region)\n",
-            "AWSINSTANCEID=\$(curl -ss http://169.254.169.254/latest/meta-data/instance-id)\n",
-            "AWSAUTOSCALINGGROUP=\$(aws autoscaling describe-auto-scaling-instances --instance-ids=\$AWSINSTANCEID --region  \$AWSREGION | jq .AutoScalingInstances[0].AutoScalingGroupName)\n",
-            "\n",
-            "\n",
-            "function getMetric {\n",
-            "  if [ \"\$1\" == \"DiskFree\" ]; then\n",
-            "    free=\$(df / | awk '/dev/ {print \$4}')\n",
-            "    echo \$(( \$free*1000 ))\n",
-            "  elif [ \"\$1\" == \"MemFree\" ]; then\n",
-            "    free -b | awk '/Mem:/ {print \$4}'\n",
-            "  elif [ \"\$1\" == \"CPUUsage\" ]; then\n",
-            "    grep 'cpu ' /proc/stat | awk '{usage=(\$2+\$4)*100/(\$2+\$4+\$5)} END {print usage}'\n ",
-            "  fi\n",
-            "}\n",
-            "\n",
-            "# Disk usage metrics\n",
-            "data=\$( getMetric DiskFree )\n",
-            "aws cloudwatch put-metric-data --value \$data --namespace Deductive/AutoScalingGroup/Instance --unit Bytes --metric-name DiskFree --dimensions AutoScalingGroup=\$AWSAUTOSCALINGGROUP,Instance=\$AWSINSTANCEID --region  \$AWSREGION\n",
-            "# Memory usage metrics\n",
-            "data=\$( getMetric MemFree )\n",
-            "aws cloudwatch put-metric-data --value \$data --namespace Deductive/AutoScalingGroup/Instance --unit Bytes --metric-name MemFree --dimensions AutoScalingGroup=\$AWSAUTOSCALINGGROUP,Instance=\$AWSINSTANCEID --region  \$AWSREGION\n",
-            "# CPU usage metrics\n",
-            "data=\$( getMetric CPUUsage )\n",
-            "aws cloudwatch put-metric-data --value \$data --namespace Deductive/AutoScalingGroup/Instance --unit Bytes --metric-name CPUUsage --dimensions AutoScalingGroup=\$AWSAUTOSCALINGGROUP,Instance=\$AWSINSTANCEID --region  \$AWSREGION\n",
-            "EOF\n",
-            "\n",
-            "chmod +x /usr/local/bin/metricscript.sh\n",
-            "\n",
-            "cat <<EOF > /etc/cron.d/autoscalinggroupmetrics\n",
-            "*/5 * * * * root /usr/local/bin/metricscript.sh\n",
-            "EOF\n",
-            "\n",
-            "# Test metrics script\n",
-            "/usr/local/bin/metricscript.sh\n",
-            "\n",
             """
-          /opt/aws/bin/cfn-signal -e $?
-            --region ${AWS::Region} \
-            --stack ${AWS::StackName} \
-            --resource LaunchConfiguration"""
+aws configure set default.region ${AWS::Region}
+cat <<EOF > /usr/local/bin/metricscript.sh
+# !/bin/bash
+
+# Collect region and instanceid from metadata
+AWSREGION=$(curl -ss http://169.254.169.254/latest/dynamic/instance-identity/document | jq -r .region)
+AWSINSTANCEID=$(curl -ss http://169.254.169.254/latest/meta-data/instance-id)
+AWSAUTOSCALINGGROUP=$(aws autoscaling describe-auto-scaling-instances --instance-ids=$AWSINSTANCEID --region  $AWSREGION | jq .AutoScalingInstances[0].AutoScalingGroupName)
+
+
+function getMetric {
+  if [ \"$1\" == \"DiskFree\" ]; then
+    free=$(df / | awk '/dev/ {print $4}')
+    echo $(( $free*1000 ))
+  elif [ \"$1\" == \"MemFree\" ]; then
+    free -b | awk '/Mem:/ {print \$4}'
+  elif [ \"$1\" == \"CPUUsage\" ]; then
+    grep 'cpu ' /proc/stat | awk '{usage=($2+$4)*100/($2+$4+$5)} END {print usage}'
+  fi
+}
+
+# Disk usage metrics
+data=$( getMetric DiskFree )
+aws cloudwatch put-metric-data --value $data --namespace Deductive/AutoScalingGroup/Instance --unit Bytes --metric-name DiskFree --dimensions AutoScalingGroup=$AWSAUTOSCALINGGROUP,Instance=$AWSINSTANCEID --region  $AWSREGION
+# Memory usage metrics
+data=$( getMetric MemFree )
+aws cloudwatch put-metric-data --value $data --namespace Deductive/AutoScalingGroup/Instance --unit Bytes --metric-name MemFree --dimensions AutoScalingGroup=$AWSAUTOSCALINGGROUP,Instance=$AWSINSTANCEID --region  $AWSREGION
+# CPU usage metrics
+data=$( getMetric CPUUsage )
+aws cloudwatch put-metric-data --value $data --namespace Deductive/AutoScalingGroup/Instance --unit Bytes --metric-name CPUUsage --dimensions AutoScalingGroup=$AWSAUTOSCALINGGROUP,Instance=$AWSINSTANCEID --region  $AWSREGION
+EOF
+
+chmod +x /usr/local/bin/metricscript.sh
+
+cat <<EOF > /etc/cron.d/autoscalinggroupmetrics
+*/5 * * * * root /usr/local/bin/metricscript.sh
+EOF
+
+# Test metrics script
+/usr/local/bin/metricscript.sh
+            """
         ]
+        self._join_to_userdata(cluster, metrics_userdata)
 
-        def join_to_userdata(cluster):
-            """ add userdata to turbine cluster"""
-            existing_userdata = cluster['Resources']['LaunchConfiguration']['Properties']['UserData']['Fn::Base64'][
-                'Fn::Sub']
-            cluster['Resources']['LaunchConfiguration']['Properties']['UserData']['Fn::Base64']['Fn::Sub'] = "".join(
-                [existing_userdata, *metrics_userdata])
-
-        join_to_userdata(self.templates_dict['workerset'])
-        join_to_userdata(self.templates_dict['webserver'])
-        join_to_userdata(self.templates_dict['scheduler'])
+    @staticmethod
+    def _join_to_userdata(cluster, userdata):
+        existing_userdata = cluster['Resources']['LaunchConfiguration']['Properties']['UserData']['Fn::Base64'][
+            'Fn::Sub']
+        cluster['Resources']['LaunchConfiguration']['Properties']['UserData']['Fn::Base64']['Fn::Sub'] = "".join(
+            [existing_userdata, *userdata])
 
     def save_templates(self):
+        # Append the cfn-signal here? Seems a better idea than what's being done rn...
+        cfn_signal = """
+/opt/aws/bin/cfn-signal -e $?
+  --region ${AWS::Region} \
+  --stack ${AWS::StackName} \
+  --resource LaunchConfiguration
+        """
+        self._join_to_userdata(self.templates_dict[Labels.workerset_label], cfn_signal)
+        self._join_to_userdata(self.templates_dict[Labels.webserver_label], cfn_signal)
+        self._join_to_userdata(self.templates_dict[Labels.scheduler_label], cfn_signal)
+
         for template_name in self.templates_dict.keys():
-            with open(os.path.join(self.updated_templates_path,
-                                   "turbine-{}.template".format(template_name)), 'w') as outfile:
+
+            path_to_template = os.path.join(self.updated_templates_path, "turbine-{}.template".format(template_name))
+            with open(path_to_template, 'w') as outfile:
                 val = dump_yaml(self.templates_dict[template_name])
+                outfile.write(val)
                 if len(val) > 51200:
                     logger.info("Template {} too long to run validation".format(template_name))
                 else:
-                    validation = self._cf.validate_template(TemplateBody=val)
-                    logger.info(f"{str(validation)} for {template_name}")
-                outfile.write(val)
+                    logger.info(f"validating {template_name} at {path_to_template}")
+                    self._cf.validate_template(TemplateBody=val)
 
     def add_policies(self, policies_base_path=""):
 
@@ -402,7 +407,9 @@ class UpdateTemplates:
         :return: path to dashboard template file as str and the parameters needed as a dict
         """
         outputs = self._add_outputs_for_dashboards()
-        self.add_instance_and_autoscaling_group_metrics()
+        self.add_instance_and_autoscaling_group_metrics(self.templates_dict['workerset'])
+        self.add_instance_and_autoscaling_group_metrics(self.templates_dict['webserver'])
+        self.add_instance_and_autoscaling_group_metrics(self.templates_dict['scheduler'])
         dashboard = DativaDashboardTemplate(
             self.project_name,
             stage_name=stage_name,
@@ -454,11 +461,39 @@ class UpdateTemplates:
         """
         Method adds workerset and queue associated with it, also adds exports for queue names where needed
         """
+        def add_parameter_and_value_to_stack(parent_stack_resource, child_stack, parameter, value, ptype="String"):
+            child_stack['Parameters'].update({parameter: {"Type": ptype}})
+            parent_stack_resource['Properties']['Parameters'].update({parameter: value})
         # Add steps here to ensure that the instance type is supported in the chosen AZs
         if not {i for i in label}.issubset({i for i in string.ascii_letters}):
             raise ValueError("Parameter label must only contain following characters {}".format(string.ascii_letters))
+
         queue_name = "QueueFor" + label
         queue_thing = sqs.Queue(queue_name, QueueName=self.project_name+self.stage_name+queue_name)
+        # This has to be formatted in a manner that will be understood within the scheduler template
+        queue_to_add_to_policy = Ref(queue_name+"Arn").to_dict()
+
+        add_parameter_and_value_to_stack(
+            self.templates_dict[Labels.cluster_label]['Resources']['SchedulerStack'],
+            self.templates_dict[Labels.scheduler_label],
+            queue_name, queue_name,
+        )
+
+        add_parameter_and_value_to_stack(
+            self.templates_dict[Labels.cluster_label]['Resources']['SchedulerStack'],
+            self.templates_dict[Labels.scheduler_label],
+            queue_name+"Arn", GetAtt(queue_name, "Arn").to_dict(),
+        )
+
+        # Add to policy for scheduler to allow it to change the queue - this will be a little arcane ...
+        # there's no better solution rn
+        policy_to_edit = self.templates_dict[Labels.scheduler_label]['Resources']['IamRole']['Properties']['Policies'][2]
+        statement = policy_to_edit['PolicyDocument']['Statement'][1]
+        statement['Resource']['Fn::If'][1].append(queue_to_add_to_policy)
+        # statement['Resource']['Fn::If'][2].append(queue_to_add_to_policy)
+
+        # Add to parameters of scheduler - need to pass in
+
 
         ws_stack_name = "WorkerSetStack" + label
         ws_stack = cloudformation.Stack(
@@ -491,8 +526,12 @@ class UpdateTemplates:
             },
             DependsOn=["SecretTargetAttachment"]
         )
+
+
         self.templates_dict[Labels.cluster_label]["Resources"].update({queue_name: queue_thing.to_dict()})
         self.templates_dict[Labels.cluster_label]["Resources"].update({ws_stack_name: ws_stack.to_dict()})
+        self.templates_dict[Labels.cluster_label]["Resources"]["CodeDeployDeploymentGroup"]["Properties"][
+            "AutoScalingGroups"].append(GetAtt(ws_stack_name, "Outputs.AutoScalingGroup").to_dict())
 
 
 class LoadBalancerTemplate:

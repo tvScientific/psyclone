@@ -221,7 +221,7 @@ Resources:
                 export DB_SECRETS_ARN="${DatabaseSecret}"
                 export LOAD_EXAMPLES="${LoadExampleDags}"
                 export LOAD_DEFAULTS="${LoadDefaultCons}"
-                export VPC_SUBNET_1A_ID="${PrivateSubnet1AID}"
+                export VPC_SUBNET_1A_ID="${PrivateSubnet1AID},${PrivateSubnet2AID}"
                 aws s3 sync s3://${QSS3BucketName}/${QSS3KeyPrefix}scripts /opt/turbine
                 chmod +x /opt/turbine/workerset.setup.sh
                 /opt/turbine/workerset.setup.sh &> /var/log/setup.log

@@ -471,7 +471,6 @@ EOF
         queue_name = "QueueFor" + label
         queue_thing = sqs.Queue(queue_name, QueueName=self.project_name+self.stage_name+queue_name)
         # This has to be formatted in a manner that will be understood within the scheduler template
-        queue_to_add_to_policy = Ref(queue_name+"Arn").to_dict()
 
         add_parameter_and_value_to_stack(
             self.templates_dict[Labels.cluster_label]['Resources']['SchedulerStack'],
@@ -489,8 +488,8 @@ EOF
         # there's no better solution rn
         policy_to_edit = self.templates_dict[Labels.scheduler_label]['Resources']['IamRole']['Properties']['Policies'][2]
         statement = policy_to_edit['PolicyDocument']['Statement'][1]
-        statement['Resource']['Fn::If'][1].append(queue_to_add_to_policy)
-        # statement['Resource']['Fn::If'][2].append(queue_to_add_to_policy)
+        statement['Resource']['Fn::If'][1].append(Ref(queue_name+"Arn").to_dict())
+        statement['Resource']['Fn::If'][2].append(Ref(queue_name + "Arn").to_dict())
 
         # Add to parameters of scheduler - need to pass in
 

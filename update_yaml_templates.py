@@ -547,6 +547,8 @@ class UpdateTemplates:
 
         self.templates_dict[Labels.cluster_label]["Resources"].update({queue_label: queue_resource.to_dict()})
         self.templates_dict[Labels.cluster_label]["Resources"].update({ws_stack_name: ws_stack.to_dict()})
+
+        # Ensure code deploy also includes the instances from the new autoscaling group
         self.templates_dict[Labels.cluster_label]["Resources"]["CodeDeployDeploymentGroup"]["Properties"][
             "AutoScalingGroups"].append(GetAtt(ws_stack_name, "Outputs.AutoScalingGroup").to_dict())
 

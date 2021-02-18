@@ -220,7 +220,9 @@ class UpdateTemplates:
 
     def add_instance_and_autoscaling_group_metrics(self, cluster):
         """
-        Need a way to do this for all worker types
+        adds metrics to a given cluster by modifying the userdata
+        :param cluster: cluster from self.templates_dict to add to
+        :return: None
         """
         metrics_userdata = [
             # add to this to userdata
@@ -283,6 +285,12 @@ class UpdateTemplates:
 
     @staticmethod
     def _join_to_userdata(cluster, userdata):
+        """
+        Adds to instance metadata for a given cluster
+        :param cluster: cluster from templates_dict to add to
+        :param userdata: Metadata you wish to add (as a list of strings)
+        :return: None
+        """
         existing_userdata = cluster['Resources']['LaunchConfiguration']['Properties']['UserData']['Fn::Base64'][
             'Fn::Sub']
         cluster['Resources']['LaunchConfiguration']['Properties']['UserData']['Fn::Base64']['Fn::Sub'] = "".join(
@@ -469,6 +477,14 @@ class UpdateTemplates:
     def add_new_workerset(self, instance_type, min_count, max_count, label):
         """
         Method adds workerset and queue associated with it, also adds exports for queue names where needed
+        :param instance_type: EC2 instance type to use
+        :param min_count: Min count to allow for autoscaling group
+        :param max_count:Max count to allow for autoscaling group
+        :param label: Arbitrary label to distinguish the worker type
+        - the queue name will appear under DEDUCTIVE_CUSTOM as {LABEL}_QUEUE in the airflow config
+        - must be unique
+        - must contain only ascii letters
+        :return: None
         """
         def add_parameter_and_value_to_stack(parent_stack_resource, child_stack, parameter, value, ptype="String"):
             child_stack['Parameters'].update({parameter: {"Type": ptype}})

@@ -224,48 +224,60 @@ class UpdateTemplates:
         """
         metrics_userdata = [
             # add to this to userdata
-            """
-aws configure set default.region ${AWS::Region}
-cat <<EOF > /usr/local/bin/metricscript.sh
-# !/bin/bash
-
-# Collect region and instanceid from metadata
-AWSREGION=$(curl -ss http://169.254.169.254/latest/dynamic/instance-identity/document | jq -r .region)
-AWSINSTANCEID=$(curl -ss http://169.254.169.254/latest/meta-data/instance-id)
-AWSAUTOSCALINGGROUP=$(aws autoscaling describe-auto-scaling-instances --instance-ids=$AWSINSTANCEID --region  $AWSREGION | jq .AutoScalingInstances[0].AutoScalingGroupName)
-
-
-function getMetric {
-  if [ \"$1\" == \"DiskFree\" ]; then
-    free=$(df / | awk '/dev/ {print $4}')
-    echo $(( $free*1000 ))
-  elif [ \"$1\" == \"MemFree\" ]; then
-    free -b | awk '/Mem:/ {print \$4}'
-  elif [ \"$1\" == \"CPUUsage\" ]; then
-    grep 'cpu ' /proc/stat | awk '{usage=($2+$4)*100/($2+$4+$5)} END {print usage}'
-  fi
-}
-
-# Disk usage metrics
-data=$( getMetric DiskFree )
-aws cloudwatch put-metric-data --value $data --namespace Deductive/AutoScalingGroup/Instance --unit Bytes --metric-name DiskFree --dimensions AutoScalingGroup=$AWSAUTOSCALINGGROUP,Instance=$AWSINSTANCEID --region  $AWSREGION
-# Memory usage metrics
-data=$( getMetric MemFree )
-aws cloudwatch put-metric-data --value $data --namespace Deductive/AutoScalingGroup/Instance --unit Bytes --metric-name MemFree --dimensions AutoScalingGroup=$AWSAUTOSCALINGGROUP,Instance=$AWSINSTANCEID --region  $AWSREGION
-# CPU usage metrics
-data=$( getMetric CPUUsage )
-aws cloudwatch put-metric-data --value $data --namespace Deductive/AutoScalingGroup/Instance --unit Bytes --metric-name CPUUsage --dimensions AutoScalingGroup=$AWSAUTOSCALINGGROUP,Instance=$AWSINSTANCEID --region  $AWSREGION
-EOF
-
-chmod +x /usr/local/bin/metricscript.sh
-
-cat <<EOF > /etc/cron.d/autoscalinggroupmetrics
-*/5 * * * * root /usr/local/bin/metricscript.sh
-EOF
-
-# Test metrics script
-/usr/local/bin/metricscript.sh
-            """
+            "aws configure set default.region ${AWS::Region}\n",
+            "cat <<EOF > /usr/local/bin/metricscript.sh\n",
+            "# !/bin/bash\n",
+            "\n",
+            "# Collect region and instanceid from metadata\n",
+            "AWSREGION=\$(curl -ss http://169.254.169.254/latest/dynamic/instance-identity/document | jq -r .region)\n",
+            "AWSINSTANCEID=\$(curl -ss http://169.254.169.254/latest/meta-data/instance-id)\n",
+            "AWSAUTOSCALINGGROUP=\$(aws autoscaling describe-auto-scaling-instances --instance-ids=\$AWSINSTANCEID --region  \$AWSREGION | jq .AutoScalingInstances[0].AutoScalingGroupName)\n",
+            "\n",
+            "\n",
+            "function getMetric {\n",
+            "  # Always return bytes\n",
+            "  if [ \"\$1\" == \"DiskTotal\" ]; then\n",
+            "    total=\$(df / | awk '/dev/ {print \$2}')\n",
+            "    echo \$(( \$total*1000 ))\n",
+            "  elif [ \"\$1\" == \"DiskUsed\" ]; then\n",
+            "    used=\$(df / | awk '/dev/ {print \$3}')\n",
+            "    echo \$(( \$used*1000 ))\n",
+            "  elif [ \"\$1\" == \"DiskFree\" ]; then\n",
+            "    free=\$(df / | awk '/dev/ {print \$4}')\n",
+            "    echo \$(( \$free*1000 ))\n",
+            "  elif [ \"\$1\" == \"MemTotal\" ]; then\n",
+            "    free -b | awk '/Mem:/ {print \$2}'\n",
+            "  elif [ \"\$1\" == \"MemUsed\" ]; then\n",
+            "    used=\$(free -b | awk '/Mem:/ {print \$3}')\n",
+            "    shared=\$(free -b | awk '/Mem:/ {print \$5}')\n",
+            "    buff=\$(free -b | awk '/Mem:/ {print \$6}')\n",
+            "    echo \$((\$used + \$shared + \$buff))\n",
+            "  elif [ \"\$1\" == \"MemFree\" ]; then\n",
+            "    free -b | awk '/Mem:/ {print \$4}'\n",
+            "  elif [ \"\$1\" == \"CPUUsage\" ]; then\n",
+            "    grep 'cpu ' /proc/stat | awk '{usage=(\$2+\$4)*100/(\$2+\$4+\$5)} END {print usage}'\n ",
+            "  fi\n",
+            "}\n",
+            "\n",
+            "# Disk usage metrics\n",
+            "data=\$( getMetric DiskFree )\n",
+            "aws cloudwatch put-metric-data --value \$data --namespace Deductive/AutoScalingGroup/Instance --unit Bytes --metric-name DiskFree --dimensions AutoScalingGroup=\$AWSAUTOSCALINGGROUP,Instance=\$AWSINSTANCEID --region  \$AWSREGION\n",
+            "# Memory usage metrics\n",
+            "data=\$( getMetric MemFree )\n",
+            "aws cloudwatch put-metric-data --value \$data --namespace Deductive/AutoScalingGroup/Instance --unit Bytes --metric-name MemFree --dimensions AutoScalingGroup=\$AWSAUTOSCALINGGROUP,Instance=\$AWSINSTANCEID --region  \$AWSREGION\n",
+            "# CPU usage metrics\n",
+            "data=\$( getMetric CPUUsage )\n",
+            "aws cloudwatch put-metric-data --value \$data --namespace Deductive/AutoScalingGroup/Instance --unit Bytes --metric-name CPUUsage --dimensions AutoScalingGroup=\$AWSAUTOSCALINGGROUP,Instance=\$AWSINSTANCEID --region  \$AWSREGION\n",
+            "EOF\n",
+            "\n",
+            "chmod +x /usr/local/bin/metricscript.sh\n",
+            "\n",
+            "cat <<EOF > /etc/cron.d/autoscalinggroupmetrics\n",
+            "*/5 * * * * root /usr/local/bin/metricscript.sh\n",
+            "EOF\n",
+            "\n",
+            "# Test metrics script\n",
+            "/usr/local/bin/metricscript.sh\n",
         ]
         self._join_to_userdata(cluster, metrics_userdata)
 
@@ -279,10 +291,7 @@ EOF
     def save_templates(self):
         # Append the cfn-signal here? Seems a better idea than what's being done rn...
         cfn_signal = """
-/opt/aws/bin/cfn-signal -e $?
-  --region ${AWS::Region} \
-  --stack ${AWS::StackName} \
-  --resource LaunchConfiguration
+/opt/aws/bin/cfn-signal -e $? --region ${AWS::Region} --stack ${AWS::StackName} --resource LaunchConfiguration
         """
         self._join_to_userdata(self.templates_dict[Labels.workerset_label], cfn_signal)
         self._join_to_userdata(self.templates_dict[Labels.webserver_label], cfn_signal)
@@ -468,31 +477,40 @@ EOF
         if not {i for i in label}.issubset({i for i in string.ascii_letters}):
             raise ValueError("Parameter label must only contain following characters {}".format(string.ascii_letters))
 
-        queue_name = "QueueFor" + label
-        queue_thing = sqs.Queue(queue_name, QueueName=self.project_name+self.stage_name+queue_name)
-        # This has to be formatted in a manner that will be understood within the scheduler template
+        queue_label = "QueueFor" + label
+        queue_name = "-".join([self.project_name, "psyclone", self.stage_name, queue_label])
+        queue_resource = sqs.Queue(queue_label, QueueName=queue_name)
 
         add_parameter_and_value_to_stack(
             self.templates_dict[Labels.cluster_label]['Resources']['SchedulerStack'],
             self.templates_dict[Labels.scheduler_label],
-            queue_name, queue_name,
+            queue_label, queue_label,
         )
 
         add_parameter_and_value_to_stack(
             self.templates_dict[Labels.cluster_label]['Resources']['SchedulerStack'],
             self.templates_dict[Labels.scheduler_label],
-            queue_name+"Arn", GetAtt(queue_name, "Arn").to_dict(),
+            queue_label+"Arn", GetAtt(queue_label, "Arn").to_dict(),
         )
 
         # Add to policy for scheduler to allow it to change the queue - this will be a little arcane ...
         # there's no better solution rn
         policy_to_edit = self.templates_dict[Labels.scheduler_label]['Resources']['IamRole']['Properties']['Policies'][2]
         statement = policy_to_edit['PolicyDocument']['Statement'][1]
-        statement['Resource']['Fn::If'][1].append(Ref(queue_name+"Arn").to_dict())
-        statement['Resource']['Fn::If'][2].append(Ref(queue_name + "Arn").to_dict())
+        # This has to be formatted in a manner that will be understood within the scheduler template
+        statement['Resource']['Fn::If'][1].append(Ref(queue_label+"Arn").to_dict())
+        statement['Resource']['Fn::If'][2].append(Ref(queue_label+"Arn").to_dict())
 
         # Add to parameters of scheduler - need to pass in
-
+        self._join_to_userdata(
+            self.templates_dict[Labels.scheduler_label],
+            ["".join(
+                [
+                    "sudo echo AIRFLOW__DEDUCTIVE_CUSTOM__", label.upper(), "_QUEUE=",
+                    queue_name, " >> /etc/sysconfig/airflow.env"
+                ]
+            )]
+        )
 
         ws_stack_name = "WorkerSetStack" + label
         ws_stack = cloudformation.Stack(
@@ -511,7 +529,7 @@ EOF
                 "PrivateSubnet2AID": Ref("PrivateSubnet2AID").to_dict(),
                 "SecurityGroupID": Ref("InstancesSecurityGroup").to_dict(),
                 "DatabaseSecret": Ref("Secret").to_dict(),
-                "QueueName": GetAtt(queue_name, "QueueName").to_dict(),
+                "QueueName": GetAtt(queue_label, "QueueName").to_dict(),
                 "LogsBucket": Ref("LogsBucket").to_dict(),
                 "InstanceType": instance_type,
                 "MinGroupSize": min_count,
@@ -527,7 +545,7 @@ EOF
         )
 
 
-        self.templates_dict[Labels.cluster_label]["Resources"].update({queue_name: queue_thing.to_dict()})
+        self.templates_dict[Labels.cluster_label]["Resources"].update({queue_label: queue_resource.to_dict()})
         self.templates_dict[Labels.cluster_label]["Resources"].update({ws_stack_name: ws_stack.to_dict()})
         self.templates_dict[Labels.cluster_label]["Resources"]["CodeDeployDeploymentGroup"]["Properties"][
             "AutoScalingGroups"].append(GetAtt(ws_stack_name, "Outputs.AutoScalingGroup").to_dict())

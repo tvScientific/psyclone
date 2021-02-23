@@ -518,15 +518,16 @@ class UpdateTemplates:
         statement['Resource']['Fn::If'][2].append(Ref(queue_label+"Arn").to_dict())
 
         # Add to parameters of scheduler - need to pass in
-        self._join_to_userdata(
-            self.templates_dict[Labels.scheduler_label],
-            ["".join(
-                [
-                    "sudo echo AIRFLOW__DEDUCTIVE_CUSTOM__", label.upper(), "_QUEUE=",
-                    queue_name, " >> /etc/sysconfig/airflow.env"
-                ]
-            )]
-        )
+        for cluster_label in [Labels.scheduler_label, Labels.webserver_label, Labels.workerset_label]:
+            self._join_to_userdata(
+                self.templates_dict[cluster_label],
+                ["".join(
+                    [
+                        "sudo echo AIRFLOW__DEDUCTIVE_CUSTOM__", label.upper(), "_QUEUE=",
+                        queue_name, " >> /etc/sysconfig/airflow.env"
+                    ]
+                )]
+            )
 
         ws_stack_name = "WorkerSetStack" + label
         ws_stack = cloudformation.Stack(

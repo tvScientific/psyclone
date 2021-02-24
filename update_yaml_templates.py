@@ -7,14 +7,16 @@ import random
 import string
 import sys
 
+import boto3
 from awacs.aws import PolicyDocument, Statement, Principal, Action, Condition, StringEquals
 from cfn_tools import load_yaml, dump_yaml
-from troposphere import Ref, Parameter, Template, Output, Join, GetAtt, Split, NoValue, AccountId
-from troposphere import cloudfront
+from troposphere import Ref, Parameter, Template, Output, Join, GetAtt, Split, NoValue, AccountId, Sub
+from troposphere import cloudformation
 from troposphere import ec2
 from troposphere import elasticloadbalancingv2
 from troposphere import route53
 from troposphere import s3
+from troposphere import sqs
 
 from psyclone.dashboards.dativa_dashboard_template import DativaDashboardTemplate
 
@@ -22,8 +24,6 @@ logger = logging.getLogger(__name__)
 stdout = logging.StreamHandler(sys.stdout)
 stdout.setFormatter(logging.Formatter('%(message)s'))
 stdout.setLevel(logging.INFO)
-logger.addHandler(stdout)
-logger.setLevel(logging.INFO)
 
 
 class Labels:
@@ -65,10 +65,13 @@ class UpdateTemplates:
         ]
         self.templates_dict = dict()
         self.region = region
+        # Only used for validating templates currently, hence region isn't mandatory
+        self._cf = boto3.client("cloudformation", region_name=self.region if self.region else "us-east-1")
         self._load_templates()
         self.random_string = self._random_generator()
         self.project_name = project_name
-        dashboard_policies_path = os.path.join(os.path.dirname(os.path.realpath(__file__)), "dashboards", "policies")
+        self.dir_of_file = os.path.dirname(os.path.realpath(__file__))
+        dashboard_policies_path = os.path.join(self.dir_of_file, "dashboards", "policies")
         self.add_policies(dashboard_policies_path)
         if 'PROD' in stage_name:
             self.add_cloudtrail()
@@ -216,9 +219,12 @@ class UpdateTemplates:
                 "Fn::GetAtt": ["TurbineCluster", "Outputs.EC2AutoScalingGroupNameWorker"]},
         }
 
-    def add_instance_and_autoscaling_group_metrics(self):
-
-        """"""
+    def add_instance_and_autoscaling_group_metrics(self, cluster):
+        """
+        adds metrics to a given cluster by modifying the userdata
+        :param cluster: cluster from self.templates_dict to add to
+        :return: None
+        """
         metrics_userdata = [
             # add to this to userdata
             "aws configure set default.region ${AWS::Region}\n",
@@ -257,17 +263,9 @@ class UpdateTemplates:
             "}\n",
             "\n",
             "# Disk usage metrics\n",
-            # "data=\$( getMetric DiskTotal )\n",
-            # "aws cloudwatch put-metric-data --value \$data --namespace Deductive/AutoScalingGroup/Instance --unit Bytes --metric-name DiskTotal --dimensions AutoScalingGroup=\$AWSAUTOSCALINGGROUP,Instance=\$AWSINSTANCEID --region  \$AWSREGION\n",
-            # "data=\$( getMetric DiskUsed )\n",
-            # "aws cloudwatch put-metric-data --value \$data --namespace Deductive/AutoScalingGroup/Instance --unit Bytes --metric-name DiskUsed --dimensions AutoScalingGroup=\$AWSAUTOSCALINGGROUP,Instance=\$AWSINSTANCEID --region  \$AWSREGION\n",
             "data=\$( getMetric DiskFree )\n",
             "aws cloudwatch put-metric-data --value \$data --namespace Deductive/AutoScalingGroup/Instance --unit Bytes --metric-name DiskFree --dimensions AutoScalingGroup=\$AWSAUTOSCALINGGROUP,Instance=\$AWSINSTANCEID --region  \$AWSREGION\n",
             "# Memory usage metrics\n",
-            # "data=\$( getMetric MemTotal )\n",
-            # "aws cloudwatch put-metric-data --value \$data --namespace Deductive/AutoScalingGroup/Instance --unit Bytes --metric-name MemTotal --dimensions AutoScalingGroup=\$AWSAUTOSCALINGGROUP,Instance=\$AWSINSTANCEID --region  \$AWSREGION\n",
-            # "data=\$( getMetric MemUsed )\n",
-            # "aws cloudwatch put-metric-data --value \$data --namespace Deductive/AutoScalingGroup/Instance --unit Bytes --metric-name MemUsed --dimensions AutoScalingGroup=\$AWSAUTOSCALINGGROUP,Instance=\$AWSINSTANCEID --region  \$AWSREGION\n",
             "data=\$( getMetric MemFree )\n",
             "aws cloudwatch put-metric-data --value \$data --namespace Deductive/AutoScalingGroup/Instance --unit Bytes --metric-name MemFree --dimensions AutoScalingGroup=\$AWSAUTOSCALINGGROUP,Instance=\$AWSINSTANCEID --region  \$AWSREGION\n",
             "# CPU usage metrics\n",
@@ -283,30 +281,42 @@ class UpdateTemplates:
             "\n",
             "# Test metrics script\n",
             "/usr/local/bin/metricscript.sh\n",
-            "\n",
-            """
-          /opt/aws/bin/cfn-signal -e $?
-            --region ${AWS::Region} \
-            --stack ${AWS::StackName} \
-            --resource LaunchConfiguration"""
         ]
+        self._join_to_userdata(cluster, metrics_userdata)
 
-        def join_to_userdata(cluster):
-            """ add userdata to turbine cluster"""
-            existing_userdata = cluster['Resources']['LaunchConfiguration']['Properties']['UserData']['Fn::Base64'][
-                'Fn::Sub']
-            cluster['Resources']['LaunchConfiguration']['Properties']['UserData']['Fn::Base64']['Fn::Sub'] = "".join(
-                [existing_userdata, *metrics_userdata])
-
-        join_to_userdata(self.templates_dict['workerset'])
-        join_to_userdata(self.templates_dict['webserver'])
-        join_to_userdata(self.templates_dict['scheduler'])
+    @staticmethod
+    def _join_to_userdata(cluster, userdata):
+        """
+        Adds to instance metadata for a given cluster
+        :param cluster: cluster from templates_dict to add to
+        :param userdata: Metadata you wish to add (as a list of strings)
+        :return: None
+        """
+        existing_userdata = cluster['Resources']['LaunchConfiguration']['Properties']['UserData']['Fn::Base64'][
+            'Fn::Sub']
+        cluster['Resources']['LaunchConfiguration']['Properties']['UserData']['Fn::Base64']['Fn::Sub'] = "".join(
+            [existing_userdata, *userdata])
 
     def save_templates(self):
+        # Append the cfn-signal here? Seems a better idea than what's being done rn...
+        cfn_signal = """
+/opt/aws/bin/cfn-signal -e $? --region ${AWS::Region} --stack ${AWS::StackName} --resource LaunchConfiguration
+        """
+        self._join_to_userdata(self.templates_dict[Labels.workerset_label], cfn_signal)
+        self._join_to_userdata(self.templates_dict[Labels.webserver_label], cfn_signal)
+        self._join_to_userdata(self.templates_dict[Labels.scheduler_label], cfn_signal)
+
         for template_name in self.templates_dict.keys():
-            with open(os.path.join(self.updated_templates_path,
-                                   "turbine-{}.template".format(template_name)), 'w') as outfile:
-                outfile.write(dump_yaml(self.templates_dict[template_name]))
+
+            path_to_template = os.path.join(self.updated_templates_path, "turbine-{}.template".format(template_name))
+            with open(path_to_template, 'w') as outfile:
+                val = dump_yaml(self.templates_dict[template_name])
+                outfile.write(val)
+                if len(val) > 51200:
+                    logger.info("Template {} too long to run validation".format(template_name))
+                else:
+                    logger.info(f"validating {template_name} at {path_to_template}")
+                    self._cf.validate_template(TemplateBody=val)
 
     def add_policies(self, policies_base_path=""):
 
@@ -415,7 +425,9 @@ class UpdateTemplates:
         :return: path to dashboard template file as str and the parameters needed as a dict
         """
         outputs = self._add_outputs_for_dashboards()
-        self.add_instance_and_autoscaling_group_metrics()
+        self.add_instance_and_autoscaling_group_metrics(self.templates_dict['workerset'])
+        self.add_instance_and_autoscaling_group_metrics(self.templates_dict['webserver'])
+        self.add_instance_and_autoscaling_group_metrics(self.templates_dict['scheduler'])
         dashboard = DativaDashboardTemplate(
             self.project_name,
             stage_name=stage_name,
@@ -462,6 +474,101 @@ class UpdateTemplates:
             },
             "DependsOn": ["CloudTrailLogsBucketPolicy"]
         }
+
+    def add_new_workerset(self, instance_type, min_count, max_count, label):
+        """
+        Method adds workerset and queue associated with it, also adds exports for queue names where needed
+        :param instance_type: EC2 instance type to use
+        :param min_count: Min count to allow for autoscaling group
+        :param max_count:Max count to allow for autoscaling group
+        :param label: Arbitrary label to distinguish the worker type
+        - the queue name will appear under DEDUCTIVE_CUSTOM as {LABEL}_QUEUE in the airflow config
+        - must be unique
+        - must contain only ascii letters
+        :return: None
+        """
+        def add_parameter_and_value_to_stack(parent_stack_resource, child_stack, parameter, value, ptype="String"):
+            child_stack['Parameters'].update({parameter: {"Type": ptype}})
+            parent_stack_resource['Properties']['Parameters'].update({parameter: value})
+        # Add steps here to ensure that the instance type is supported in the chosen AZs
+        if not {i for i in label}.issubset({i for i in string.ascii_letters}):
+            raise ValueError("Parameter label must only contain following characters {}".format(string.ascii_letters))
+
+        queue_label = "QueueFor" + label
+        queue_name = "-".join([self.project_name, "psyclone", self.stage_name, queue_label])
+        queue_resource = sqs.Queue(queue_label, QueueName=queue_name)
+
+        add_parameter_and_value_to_stack(
+            self.templates_dict[Labels.cluster_label]['Resources']['SchedulerStack'],
+            self.templates_dict[Labels.scheduler_label],
+            queue_label, queue_label,
+        )
+
+        add_parameter_and_value_to_stack(
+            self.templates_dict[Labels.cluster_label]['Resources']['SchedulerStack'],
+            self.templates_dict[Labels.scheduler_label],
+            queue_label+"Arn", GetAtt(queue_label, "Arn").to_dict(),
+        )
+
+        # Add to policy for scheduler to allow it to change the queue - this will be a little arcane ...
+        # there's no better solution rn
+        policy_to_edit = self.templates_dict[Labels.scheduler_label]['Resources']['IamRole']['Properties']['Policies'][2]
+        statement = policy_to_edit['PolicyDocument']['Statement'][1]
+        # This has to be formatted in a manner that will be understood within the scheduler template
+        statement['Resource']['Fn::If'][1].append(Ref(queue_label+"Arn").to_dict())
+        statement['Resource']['Fn::If'][2].append(Ref(queue_label+"Arn").to_dict())
+
+        # Add to parameters of scheduler - need to pass in
+        for cluster_label in [Labels.scheduler_label, Labels.webserver_label, Labels.workerset_label]:
+            self._join_to_userdata(
+                self.templates_dict[cluster_label],
+                ["".join(
+                    [
+                        "sudo echo AIRFLOW__DEDUCTIVE_CUSTOM__", label.upper(), "_QUEUE=",
+                        queue_name, " >> /etc/sysconfig/airflow.env"
+                    ]
+                )]
+            )
+
+        ws_stack_name = "WorkerSetStack" + label
+        ws_stack = cloudformation.Stack(
+            ws_stack_name,
+            TemplateURL=Join(
+                '',
+                [
+                    Sub("https://${QSS3BucketName}.s3.amazonaws.com/", ),
+                    Ref("QSS3KeyPrefix"),
+                    "templates/turbine-workerset.template",
+                ],
+            ),
+            Parameters={
+                "VPCID": Ref("VPCID").to_dict(),
+                "PrivateSubnet1AID": Ref("PrivateSubnet1AID").to_dict(),
+                "PrivateSubnet2AID": Ref("PrivateSubnet2AID").to_dict(),
+                "SecurityGroupID": Ref("InstancesSecurityGroup").to_dict(),
+                "DatabaseSecret": Ref("Secret").to_dict(),
+                "QueueName": GetAtt(queue_label, "QueueName").to_dict(),
+                "LogsBucket": Ref("LogsBucket").to_dict(),
+                "InstanceType": instance_type,
+                "MinGroupSize": min_count,
+                "MaxGroupSize": max_count,
+                "ShrinkThreshold": Ref("ShrinkThreshold").to_dict(),
+                "GrowthThreshold": Ref("GrowthThreshold").to_dict(),
+                "LoadExampleDags": Ref("LoadExampleDags").to_dict(),
+                "LoadDefaultCons": Ref("LoadDefaultCons").to_dict(),
+                "QSS3BucketName": Ref("QSS3BucketName").to_dict(),
+                "QSS3KeyPrefix": Ref("QSS3KeyPrefix").to_dict(),
+            },
+            DependsOn=["SecretTargetAttachment"]
+        )
+
+
+        self.templates_dict[Labels.cluster_label]["Resources"].update({queue_label: queue_resource.to_dict()})
+        self.templates_dict[Labels.cluster_label]["Resources"].update({ws_stack_name: ws_stack.to_dict()})
+
+        # Ensure code deploy also includes the instances from the new autoscaling group
+        self.templates_dict[Labels.cluster_label]["Resources"]["CodeDeployDeploymentGroup"]["Properties"][
+            "AutoScalingGroups"].append(GetAtt(ws_stack_name, "Outputs.AutoScalingGroup").to_dict())
 
 
 class LoadBalancerTemplate:

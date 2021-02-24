@@ -475,6 +475,11 @@ class UpdateTemplates:
             "DependsOn": ["CloudTrailLogsBucketPolicy"]
         }
 
+    @staticmethod
+    def _add_parameter_and_value_to_stack(parent_stack_resource, child_stack, parameter, value, ptype="String"):
+        child_stack['Parameters'].update({parameter: {"Type": ptype}})
+        parent_stack_resource['Properties']['Parameters'].update({parameter: value})
+
     def add_new_workerset(self, instance_type, min_count, max_count, label):
         """
         Method adds workerset and queue associated with it, also adds exports for queue names where needed
@@ -487,9 +492,7 @@ class UpdateTemplates:
         - must contain only ascii letters
         :return: None
         """
-        def add_parameter_and_value_to_stack(parent_stack_resource, child_stack, parameter, value, ptype="String"):
-            child_stack['Parameters'].update({parameter: {"Type": ptype}})
-            parent_stack_resource['Properties']['Parameters'].update({parameter: value})
+
         # Add steps here to ensure that the instance type is supported in the chosen AZs
         if not {i for i in label}.issubset({i for i in string.ascii_letters}):
             raise ValueError("Parameter label must only contain following characters {}".format(string.ascii_letters))
@@ -498,13 +501,13 @@ class UpdateTemplates:
         queue_name = "-".join([self.project_name, "psyclone", self.stage_name, queue_label])
         queue_resource = sqs.Queue(queue_label, QueueName=queue_name)
 
-        add_parameter_and_value_to_stack(
+        self._add_parameter_and_value_to_stack(
             self.templates_dict[Labels.cluster_label]['Resources']['SchedulerStack'],
             self.templates_dict[Labels.scheduler_label],
             queue_label, queue_label,
         )
 
-        add_parameter_and_value_to_stack(
+        self._add_parameter_and_value_to_stack(
             self.templates_dict[Labels.cluster_label]['Resources']['SchedulerStack'],
             self.templates_dict[Labels.scheduler_label],
             queue_label+"Arn", GetAtt(queue_label, "Arn").to_dict(),

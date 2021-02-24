@@ -52,7 +52,7 @@ class UpdateTemplates:
     # better names
     def __init__(self, templates_path, policies_base_path, updated_templates_path, stage_name, project_name,
                  region=None, load_balancer=False, route_53=True):
-        self._cf = boto3.client("cloudformation")
+        self._cf = boto3.client("cloudformation", region_name=self.region)
         self.templates_path = templates_path
         self.policies_base_path = policies_base_path
         self.updated_templates_path = updated_templates_path

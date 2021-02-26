@@ -312,8 +312,7 @@ Resources:
                     - - arn:aws:autoscaling
                       - !Ref AWS::Region
                       - !Ref AWS::AccountId
-                      - autoScalingGroup:*:autoScalingGroupName/
-                      - !Sub ${AWS::StackName}
+                      - !Sub autoScalingGroup:*:autoScalingGroupName/${AWS::StackName}
         - PolicyName: TurbineAirflowWorkersetQueueRWPolicy
           PolicyDocument:
             Version: 2012-10-17

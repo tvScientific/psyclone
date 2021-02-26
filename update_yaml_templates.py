@@ -480,7 +480,7 @@ class UpdateTemplates:
         child_stack['Parameters'].update({parameter: {"Type": ptype}})
         parent_stack_resource['Properties']['Parameters'].update({parameter: value})
 
-    def add_new_workerset(self, instance_type, min_count, max_count, label):
+    def add_new_workerset(self, instance_type, min_count, max_count, label, use_spot=False, region=""):
         """
         Method adds workerset and queue associated with it, also adds exports for queue names where needed
         :param instance_type: EC2 instance type to use
@@ -490,8 +490,16 @@ class UpdateTemplates:
         - the queue name will appear under DEDUCTIVE_CUSTOM as {LABEL}_QUEUE in the airflow config
         - must be unique
         - must contain only ascii letters
+        :param use_spot: Whether to set spot-instances
+        - max spot price will be set depending on the on-demand price of the region
+        :param region: If specifying to use spot, you must also specify the region. e.g. eu-west-1
         :return: None
         """
+
+        if use_spot and not region:
+            raise ValueError(
+                "Must specify region to use spot instances - is used to check on-demand price to update template"
+            )
 
         # Add steps here to ensure that the instance type is supported in the chosen AZs
         if not {i for i in label}.issubset({i for i in string.ascii_letters}):
@@ -511,7 +519,7 @@ class UpdateTemplates:
             self.templates_dict[Labels.cluster_label]['Resources']['SchedulerStack'],
             self.templates_dict[Labels.scheduler_label],
             queue_label+"Arn", GetAtt(queue_label, "Arn").to_dict(),
-        )
+            )
 
         # Add to policy for scheduler to allow it to change the queue - this will be a little arcane ...
         # there's no better solution rn
@@ -572,6 +580,60 @@ class UpdateTemplates:
         # Ensure code deploy also includes the instances from the new autoscaling group
         self.templates_dict[Labels.cluster_label]["Resources"]["CodeDeployDeploymentGroup"]["Properties"][
             "AutoScalingGroups"].append(GetAtt(ws_stack_name, "Outputs.AutoScalingGroup").to_dict())
+
+        if use_spot:
+            pricing = boto3.client("pricing", region_name=region)
+
+            region_and_region_name = {
+                'us-east-2': 'US East (Ohio)',
+                'us-east-1': 'US East (N. Virginia)',
+                'us-west-1': 'US West (N. California)',
+                'us-west-2': 'US West (Oregon)',
+                'af-south-1': 'Africa (Cape Town)',
+                'ap-east-1': 'Asia Pacific (Hong Kong)',
+                'ap-south-1': 'Asia Pacific (Mumbai)',
+                'ap-northeast-3': 'Asia Pacific (Osaka-Local)',
+                'ap-northeast-2': 'Asia Pacific (Seoul)',
+                'ap-southeast-1': 'Asia Pacific (Singapore)',
+                'ap-southeast-2': 'Asia Pacific (Sydney)',
+                'ap-northeast-1': 'Asia Pacific (Tokyo)',
+                'ca-central-1': 'Canada (Central)',
+                'cn-north-1': 'China (Beijing)',
+                'cn-northwest-1': 'China (Ningxia)',
+                'eu-central-1': 'Europe (Frankfurt)',
+                'eu-west-1': 'Europe (Ireland)',
+                'eu-west-2': 'Europe (London)',
+                'eu-south-1': 'Europe (Milan)',
+                'eu-west-3': 'Europe (Paris)',
+                'eu-north-1': 'Europe (Stockholm)',
+                'me-south-1': 'Middle East (Bahrain)',
+                'sa-east-1': 'South America (Sao Paulo)'
+            }
+
+            # Get price from the arcane API for getting pricing
+            resp = pricing.get_products(ServiceCode='AmazonEC2', Filters=[
+                {"Field": "tenancy", "Value": "shared", "Type": "TERM_MATCH"},
+                {"Field": "operatingSystem", "Value": "Linux", "Type": "TERM_MATCH"},
+                {"Field": "preInstalledSw", "Value": "NA", "Type": "TERM_MATCH"},
+                {"Field": "instanceType", "Value": instance_type, "Type": "TERM_MATCH"},
+                {"Field": "location", "Value": region_and_region_name[region], "Type": "TERM_MATCH"},
+                {"Field": "capacitystatus", "Value": "Used", "Type": "TERM_MATCH"}
+            ])
+            price_list = resp['PriceList']
+            if len(price_list) != 1:
+                raise ValueError(
+                    "Ambiguous pricing - must have only 1 object in price list. {}".format(str(price_list))
+                )
+            price_dict = json.loads(price_list[0])['terms']['OnDemand']
+            sku = list(price_dict.keys())[0]
+            print(json.dumps(price_dict, indent=4))
+            sku2 = list(price_dict[sku]['priceDimensions'].keys())[0]
+            price = price_dict[sku]['priceDimensions'][sku2]['pricePerUnit']['USD']
+
+            # Add price to template
+            self.templates_dict[Labels.cluster_label]['Resources'][ws_stack_name]['Properties']['Parameters'].update(
+                {"SpotPriceToSet": price}
+            )
 
 
 class LoadBalancerTemplate:

@@ -30,6 +30,7 @@ Metadata:
           - MaxGroupSize
           - ShrinkThreshold
           - GrowthThreshold
+          - SpotPriceToSet
       - Label:
           default: Apache Airflow configuration
         Parameters:
@@ -138,6 +139,11 @@ Parameters:
       instance.
     Default: 0.9
     Type: Number
+  SpotPriceToSet:
+    Description: >-
+      Set max spot price for the autoscaling group included, default value will give on-demand instance.
+    Default: ""
+    Type: String
 
   LoadExampleDags:
     Description: >-
@@ -184,12 +190,17 @@ Parameters:
 
 Conditions:
   UsingDefaultBucket: !Equals [!Ref QSS3BucketName, 'turbine-quickstart']
+  UsingSpot: !Equals [!Ref SpotPriceToSet, '']
 
 Resources:
 
   LaunchConfiguration:
     Type: AWS::AutoScaling::LaunchConfiguration
     Properties:
+      SpotPrice: !If
+        - UsingDefaultBucket
+        - !Ref SpotPriceToSet
+        - AWS::NoValue
       IamInstanceProfile: !Ref IamInstanceProfile
       ImageId: !FindInMap
         - AWSAMIRegionMap

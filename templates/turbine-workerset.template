@@ -243,6 +243,7 @@ Resources:
   AutoScalingGroup:
     Type: AWS::AutoScaling::AutoScalingGroup
     Properties:
+      AutoScalingGroupName: !Sub ${AWS::StackName}
       LaunchConfigurationName: !Ref LaunchConfiguration
       MaxSize: !Ref MaxGroupSize
       MinSize: !Ref MinGroupSize
@@ -277,7 +278,7 @@ Resources:
       ManagedPolicyArns:
         - arn:aws:iam::aws:policy/service-role/AmazonEC2RoleforSSM
       Policies:
-        - PolicyName: !Sub TurbineAirflowWorkersetDescribeStackPolicy-${AWS::StackName}
+        - PolicyName: TurbineAirflowWorkersetDescribeStackPolicy
           PolicyDocument:
             Version: 2012-10-17
             Statement:
@@ -290,7 +291,7 @@ Resources:
                     - !Ref AWS::Region
                     - !Ref AWS::AccountId
                     - !Sub stack/${AWS::StackName}/*
-        - PolicyName: !Sub TurbineAirflowWorkersetGetSecretPolicy-${AWS::StackName}
+        - PolicyName: TurbineAirflowWorkersetGetSecretPolicy
           PolicyDocument:
             Version: 2012-10-17
             Statement:
@@ -298,7 +299,22 @@ Resources:
                 Action:
                   - secretsmanager:GetSecretValue
                 Resource: !Ref DatabaseSecret
-        - PolicyName: !Sub TurbineAirflowWorkersetQueueRWPolicy-${AWS::StackName}
+        - PolicyName: AllowHeartbeat
+          PolicyDocument:
+            Version: 2012-10-17
+            Statement:
+              - Effect: Allow
+                Action:
+                  - autoscaling:RecordLifecycleActionHeartbeat
+                Resource:
+                  - !Join
+                    - ':'
+                    - - arn:aws:autoscaling
+                      - !Ref AWS::Region
+                      - !Ref AWS::AccountId
+                      - autoScalingGroup:*:autoScalingGroupName/
+                      - !Sub ${AWS::StackName}
+        - PolicyName: TurbineAirflowWorkersetQueueRWPolicy
           PolicyDocument:
             Version: 2012-10-17
             Statement:
@@ -316,7 +332,7 @@ Resources:
                   - sqs:ReceiveMessage
                   - sqs:SendMessage
                 Resource: !Sub arn:aws:sqs:${AWS::Region}:${AWS::AccountId}:${QueueName}
-        - PolicyName: !Sub TurbineAirflowWorkersetLogsRWPolicy-${AWS::StackName}
+        - PolicyName: TurbineAirflowWorkersetLogsRWPolicy
           PolicyDocument:
             Version: 2012-10-17
             Statement:

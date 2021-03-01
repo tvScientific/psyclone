@@ -142,7 +142,7 @@ Parameters:
   SpotPriceToSet:
     Description: >-
       Set max spot price for the autoscaling group included, default value will give on-demand instance.
-    Default: ""
+    Default: ''
     Type: String
 
   LoadExampleDags:
@@ -190,17 +190,14 @@ Parameters:
 
 Conditions:
   UsingDefaultBucket: !Equals [!Ref QSS3BucketName, 'turbine-quickstart']
-  UsingSpot: !Equals [!Ref SpotPriceToSet, '']
-
+  NotUsingSpot: !Equals [!Ref SpotPriceToSet, '']
+  UsingSpot: !Not
+    - !Equals [!Ref SpotPriceToSet, '']
 Resources:
 
   LaunchConfiguration:
     Type: AWS::AutoScaling::LaunchConfiguration
     Properties:
-      SpotPrice: !If
-        - UsingDefaultBucket
-        - !Ref SpotPriceToSet
-        - AWS::NoValue
       IamInstanceProfile: !Ref IamInstanceProfile
       ImageId: !FindInMap
         - AWSAMIRegionMap
@@ -235,6 +232,29 @@ Resources:
                 chmod +x /opt/turbine/workerset.setup.sh
                 /opt/turbine/workerset.setup.sh &> /var/log/setup.log || exit
 
+  LaunchConfigurationSpot:
+    Type: AWS::AutoScaling::LaunchConfiguration
+    Condition: UsingSpot
+
+    Properties:
+      SpotPrice: !Ref SpotPriceToSet
+      IamInstanceProfile: !Ref IamInstanceProfile
+      ImageId: !FindInMap
+        - AWSAMIRegionMap
+        - !Ref AWS::Region
+        - AMZNLINUX2
+      InstanceType: !Ref InstanceType
+      SecurityGroups:
+        - !Ref SecurityGroup
+        - !Ref SecurityGroupID
+      UserData:
+        Fn::Base64: !Sub |
+          #!/bin/bash -xe
+          /opt/aws/bin/cfn-init -v \
+            --region ${AWS::Region} \
+            --stack ${AWS::StackName} \
+            --resource LaunchConfiguration
+
   SecurityGroup:
     Type: AWS::EC2::SecurityGroup
     Properties:
@@ -255,7 +275,10 @@ Resources:
     Type: AWS::AutoScaling::AutoScalingGroup
     Properties:
       AutoScalingGroupName: !Sub ${AWS::StackName}
-      LaunchConfigurationName: !Ref LaunchConfiguration
+      LaunchConfigurationName: !If
+        - UsingSpot
+        - !Ref LaunchConfigurationSpot
+        - !Ref LaunchConfiguration
       MaxSize: !Ref MaxGroupSize
       MinSize: !Ref MinGroupSize
       MetricsCollection:

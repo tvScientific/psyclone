@@ -584,6 +584,7 @@ class UpdateTemplates:
         if use_spot:
             pricing = boto3.client("pricing", region_name=region)
 
+            # Filtering on pricing API uses full region name rather than region code
             region_and_region_name = {
                 'us-east-2': 'US East (Ohio)',
                 'us-east-1': 'US East (N. Virginia)',
@@ -624,11 +625,13 @@ class UpdateTemplates:
                 raise ValueError(
                     "Ambiguous pricing - must have only 1 object in price list. {}".format(str(price_list))
                 )
+
+            # Pricing dictionary returned is a little strange
             price_dict = json.loads(price_list[0])['terms']['OnDemand']
             sku = list(price_dict.keys())[0]
-            print(json.dumps(price_dict, indent=4))
             sku2 = list(price_dict[sku]['priceDimensions'].keys())[0]
-            price = price_dict[sku]['priceDimensions'][sku2]['pricePerUnit']['USD']
+            price = float(price_dict[sku]['priceDimensions'][sku2]['pricePerUnit']['USD'])
+            logger.info("Price {} USD per hour determined for EC2 type for {} {}".format(price, instance_type, region))
 
             # Add price to template
             self.templates_dict[Labels.cluster_label]['Resources'][ws_stack_name]['Properties']['Parameters'].update(

@@ -148,7 +148,7 @@ class UpdateTemplates:
                     rds_instance_type = self.STAGE_NAMES_AND_CONFIGS[self.stage_name]["rds_instance_type"]
                     logger.info("Updating templates to use {} as rds instance type from class attribute".format(
                         rds_instance_type))
-                    self.templates_dict[Labels.cluster_label]["Resources"]["DBInstance"][
+                    self.templates_dict[Labels.cluster_label]["Resources"]["DBInstance"]["Properties"][
                         "DBInstanceClass"] = rds_instance_type
                 else:
                     logger.info("No rds_instance_type detected")

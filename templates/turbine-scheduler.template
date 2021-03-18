@@ -10,8 +10,7 @@ Metadata:
       - Label:
           default: VPC network configuration
         Parameters:
-          - PrivateSubnet1AID
-          - PrivateSubnet2AID
+          - SubnetIDsASG
           - SecurityGroupID
       - Label:
           default: Turbine cluster configuration
@@ -34,10 +33,8 @@ Metadata:
           - QSS3BucketName
           - QSS3KeyPrefix
     ParameterLabels:
-      PrivateSubnet1AID:
-        default: Private subnet 1 ID
-      PrivateSubnet2AID:
-        default: Private subnet 2 ID
+      SubnetIDsASG:
+        default: SubnetIDs to use for schedulers
       SecurityGroupID:
         default: Security group ID
       DatabaseSecret:
@@ -58,18 +55,16 @@ Metadata:
         default: Quick Start S3 key prefix
 Parameters:
 
-  PrivateSubnet1AID:
-    Description: An existing private Subnet in some Availability Zone.
-    Type: AWS::EC2::Subnet::Id
-  PrivateSubnet2AID:
-    Description: An existing private Subnet in another Availability Zone.
-    Type: AWS::EC2::Subnet::Id
+  SubnetIDsASG:
+    Description: Existing public subnet IDs
+    Type: CommaDelimitedList
   SecurityGroupID:
     Description: >-
       Security Group ID of an externally managed security group that gives
       instances access to relevant external resources like the metadata database
       endpoints in the two provided subnets.
     Type: AWS::EC2::SecurityGroup::Id
+
 
   DatabaseSecret:
     Description: >-
@@ -151,9 +146,7 @@ Resources:
       MinSize: '1'
       MetricsCollection:
         - Granularity: 1Minute
-      VPCZoneIdentifier:
-        - !Ref PrivateSubnet1AID
-        - !Ref PrivateSubnet2AID
+      VPCZoneIdentifier: !Ref SubnetIDsASG
       Tags:
         - Key: Name
           Value: turbine-scheduler

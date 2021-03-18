@@ -13,8 +13,7 @@ Metadata:
           default: VPC network configuration
         Parameters:
           - VPCID
-          - PrivateSubnet1AID
-          - PrivateSubnet2AID
+          - SubnetIDsASG
           - SecurityGroupID
       - Label:
           default: Turbine cluster configuration
@@ -43,10 +42,8 @@ Metadata:
     ParameterLabels:
       VPCID:
         default: VPC ID
-      PrivateSubnet1AID:
-        default: Private subnet 1 ID
-      PrivateSubnet2AID:
-        default: Private subnet 2 ID
+      SubnetIDsASG:
+        default: SubnetIDs to use for workers
       SecurityGroupID:
         default: Security group ID
       DatabaseSecret:
@@ -78,12 +75,9 @@ Parameters:
   VPCID:
     Description: An existing VPC for the cluster.
     Type: AWS::EC2::VPC::Id
-  PrivateSubnet1AID:
-    Description: An existing private Subnet in some Availability Zone.
-    Type: AWS::EC2::Subnet::Id
-  PrivateSubnet2AID:
-    Description: An existing private Subnet in another Availability Zone.
-    Type: AWS::EC2::Subnet::Id
+  SubnetIDsASG:
+    Description: Existing public subnet IDs
+    Type: CommaDelimitedList
   SecurityGroupID:
     Description: >-
       Security Group ID of an externally managed security group that gives
@@ -249,9 +243,7 @@ Resources:
       MinSize: !Ref MinGroupSize
       MetricsCollection:
         - Granularity: 1Minute
-      VPCZoneIdentifier:
-        - !Ref PrivateSubnet1AID
-        - !Ref PrivateSubnet2AID
+      VPCZoneIdentifier: !Ref SubnetIDsASG
       Tags:
         - Key: Name
           Value: turbine-worker
@@ -353,7 +345,9 @@ Resources:
     Type: AWS::EFS::MountTarget
     Properties:
       FileSystemId: !Ref FileSystem
-      SubnetId: !Ref PrivateSubnet1AID
+      SubnetId: !Select
+        - 0
+        - !Ref SubnetIDsASG
       SecurityGroups:
         - !Ref EfsMountSecurityGroup
 
@@ -361,7 +355,9 @@ Resources:
     Type: AWS::EFS::MountTarget
     Properties:
       FileSystemId: !Ref FileSystem
-      SubnetId: !Ref PrivateSubnet2AID
+      SubnetId: !Select
+        - 1
+        - !Ref SubnetIDsASG
       SecurityGroups:
         - !Ref EfsMountSecurityGroup
 

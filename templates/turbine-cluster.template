@@ -17,10 +17,7 @@ Metadata:
           default: VPC network configuration
         Parameters:
           - VPCID
-          - PublicSubnet1ID
-          - PublicSubnet2ID
-          - PrivateSubnet1AID
-          - PrivateSubnet2AID
+          - SubnetIDsASG
           - AllowHTTPAccessCIDR
       - Label:
           default: Turbine Cluster configuration
@@ -46,14 +43,8 @@ Metadata:
     ParameterLabels:
       VPCID:
         default: VPC ID
-      PublicSubnet1ID:
-        default: Public subnet 1 ID
-      PublicSubnet2ID:
-        default: Public subnet 2 ID
-      PrivateSubnet1AID:
-        default: Private subnet 1 ID
-      PrivateSubnet2AID:
-        default: Private subnet 2 ID
+      SubnetIDsASG:
+        default: SubnetIDs to use
       AllowHTTPAccessCIDR:
         default: Allowed HTTP access CIDR
       SchedulerInstanceType:
@@ -85,18 +76,9 @@ Parameters:
   VPCID:
     Description: An existing VPC for the cluster.
     Type: AWS::EC2::VPC::Id
-  PublicSubnet1ID:
-    Description: An existing public Subnet in some Availability Zone.
-    Type: AWS::EC2::Subnet::Id
-  PublicSubnet2ID:
-    Description: An existing public Subnet in another Availability Zone.
-    Type: AWS::EC2::Subnet::Id
-  PrivateSubnet1AID:
-    Description: An existing private Subnet in some Availability Zone.
-    Type: AWS::EC2::Subnet::Id
-  PrivateSubnet2AID:
-    Description: An existing private Subnet in another Availability Zone.
-    Type: AWS::EC2::Subnet::Id
+  SubnetIDsASG:
+    Description: Existing public subnet IDs
+    Type: CommaDelimitedList
   AllowHTTPAccessCIDR:
     Description: >-
       The IPv4 CIDR block to allow HTTP access in the webserver. Using the same
@@ -213,9 +195,7 @@ Resources:
     Properties:
       DBSubnetGroupDescription: >
         Associates the Database Instances with the selected VPC Subnets.
-      SubnetIds:
-        - !Ref PrivateSubnet1AID
-        - !Ref PrivateSubnet2AID
+      SubnetIds: !Ref SubnetIDsASG
 
   DBInstance:
     Type: AWS::RDS::DBInstance
@@ -298,8 +278,9 @@ Resources:
           - !Ref QSS3KeyPrefix
           - templates/turbine-scheduler.template
       Parameters:
-        PrivateSubnet1AID: !Ref PrivateSubnet1AID
-        PrivateSubnet2AID: !Ref PrivateSubnet2AID
+        SubnetIDsASG: !Join
+          - ","
+          - !Ref SubnetIDsASG
         SecurityGroupID: !Ref InstancesSecurityGroup
         DatabaseSecret: !Ref Secret
         QueueName: !GetAtt TaskQueue.QueueName
@@ -323,8 +304,9 @@ Resources:
           - templates/turbine-webserver.template
       Parameters:
         VPCID: !Ref VPCID
-        PublicSubnet1ID: !Ref PublicSubnet1ID
-        PublicSubnet2ID: !Ref PublicSubnet2ID
+        SubnetIDsASG: !Join
+          - ","
+          - !Ref SubnetIDsASG
         SecurityGroupID: !Ref InstancesSecurityGroup
         AllowHTTPAccessCIDR: !Ref AllowHTTPAccessCIDR
         DatabaseSecret: !Ref Secret
@@ -350,8 +332,9 @@ Resources:
           - templates/turbine-workerset.template
       Parameters:
         VPCID: !Ref VPCID
-        PrivateSubnet1AID: !Ref PrivateSubnet1AID
-        PrivateSubnet2AID: !Ref PrivateSubnet2AID
+        SubnetIDsASG: !Join
+          - ","
+          - !Ref SubnetIDsASG
         SecurityGroupID: !Ref InstancesSecurityGroup
         DatabaseSecret: !Ref Secret
         QueueName: !GetAtt TaskQueue.QueueName

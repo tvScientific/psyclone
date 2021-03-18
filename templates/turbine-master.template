@@ -267,11 +267,11 @@ Resources:
           - templates/turbine-cluster.template
       Parameters:
         VPCID: !GetAtt VPCStack.Outputs.VPCID
-        PublicSubnet1ID: !GetAtt VPCStack.Outputs.PublicSubnet1ID
-        PublicSubnet2ID: !GetAtt VPCStack.Outputs.PublicSubnet2ID
+        SubnetIDsASG: !Join
+          - ','
+          - - !GetAtt VPCStack.Outputs.PrivateSubnet1AID
+            - !GetAtt VPCStack.Outputs.PrivateSubnet2AID
         SchedulerAsWorker: !Ref SchedulerAsWorker
-        PrivateSubnet1AID: !GetAtt VPCStack.Outputs.PrivateSubnet1AID
-        PrivateSubnet2AID: !GetAtt VPCStack.Outputs.PrivateSubnet2AID
         AllowHTTPAccessCIDR: !Ref AllowHTTPAccessCIDR
         WebServerPort: !Ref WebServerPort
         SchedulerInstanceType: !Ref SchedulerInstanceType

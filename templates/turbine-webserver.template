@@ -11,9 +11,7 @@ Metadata:
           default: VPC network configuration
         Parameters:
           - VPCID
-          - PublicSubnet1ID
-          - PublicSubnet2ID
-          - SecurityGroupID
+          - SubnetIDsASG
           - AllowHTTPAccessCIDR
       - Label:
           default: Turbine Cluster configuration
@@ -39,10 +37,8 @@ Metadata:
     ParameterLabels:
       VPCID:
         default: VPC ID
-      PublicSubnet1ID:
-        default: Public subnet 1 ID
-      PublicSubnet2ID:
-        default: Public subnet 2 ID
+      SubnetIDsASG:
+        default: SubnetIDs to use for webservers
       SecurityGroupID:
         default: Security group ID
       AllowHTTPAccessCIDR:
@@ -70,12 +66,9 @@ Parameters:
   VPCID:
     Description: An existing VPC for the cluster.
     Type: AWS::EC2::VPC::Id
-  PublicSubnet1ID:
-    Description: An existing public Subnet in some Availability Zone.
-    Type: AWS::EC2::Subnet::Id
-  PublicSubnet2ID:
-    Description: An existing public Subnet in another Availability Zone.
-    Type: AWS::EC2::Subnet::Id
+  SubnetIDsASG:
+    Description: Existing public subnet IDs
+    Type: CommaDelimitedList
   SecurityGroupID:
     Description: >-
       Security Group ID of an externally managed security group that gives
@@ -232,9 +225,7 @@ Resources:
       MinSize: '1'
       MetricsCollection:
         - Granularity: 1Minute
-      VPCZoneIdentifier:
-        - !Ref PublicSubnet1ID
-        - !Ref PublicSubnet2ID
+      VPCZoneIdentifier: !Ref SubnetIDsASG
       Tags:
         - Key: Name
           Value: turbine-webserver

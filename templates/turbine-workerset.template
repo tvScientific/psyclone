@@ -13,7 +13,7 @@ Metadata:
           default: VPC network configuration
         Parameters:
           - VPCID
-          - SubnetIDsASG
+          - PrivateSubnetIds
           - SecurityGroupID
       - Label:
           default: Turbine cluster configuration
@@ -42,7 +42,7 @@ Metadata:
     ParameterLabels:
       VPCID:
         default: VPC ID
-      SubnetIDsASG:
+      PrivateSubnetIds:
         default: SubnetIDs to use for workers
       SecurityGroupID:
         default: Security group ID
@@ -75,9 +75,9 @@ Parameters:
   VPCID:
     Description: An existing VPC for the cluster.
     Type: AWS::EC2::VPC::Id
-  SubnetIDsASG:
+  PrivateSubnetIds:
     Description: Existing public subnet IDs
-    Type: CommaDelimitedList
+    Type: String
   SecurityGroupID:
     Description: >-
       Security Group ID of an externally managed security group that gives
@@ -243,7 +243,7 @@ Resources:
       MinSize: !Ref MinGroupSize
       MetricsCollection:
         - Granularity: 1Minute
-      VPCZoneIdentifier: !Ref SubnetIDsASG
+      VPCZoneIdentifier: !Split [",", !Ref PrivateSubnetIds]
       Tags:
         - Key: Name
           Value: turbine-worker
@@ -347,7 +347,7 @@ Resources:
       FileSystemId: !Ref FileSystem
       SubnetId: !Select
         - 0
-        - !Ref SubnetIDsASG
+        - !Split [",", !Ref PrivateSubnetIds]
       SecurityGroups:
         - !Ref EfsMountSecurityGroup
 
@@ -357,7 +357,7 @@ Resources:
       FileSystemId: !Ref FileSystem
       SubnetId: !Select
         - 1
-        - !Ref SubnetIDsASG
+        - !Split [",", !Ref PrivateSubnetIds]
       SecurityGroups:
         - !Ref EfsMountSecurityGroup
 

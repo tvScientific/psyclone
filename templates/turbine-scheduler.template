@@ -10,7 +10,7 @@ Metadata:
       - Label:
           default: VPC network configuration
         Parameters:
-          - SubnetIDsASG
+          - PrivateSubnetIds
           - SecurityGroupID
       - Label:
           default: Turbine cluster configuration
@@ -33,7 +33,7 @@ Metadata:
           - QSS3BucketName
           - QSS3KeyPrefix
     ParameterLabels:
-      SubnetIDsASG:
+      PrivateSubnetIds:
         default: SubnetIDs to use for schedulers
       SecurityGroupID:
         default: Security group ID
@@ -55,9 +55,9 @@ Metadata:
         default: Quick Start S3 key prefix
 Parameters:
 
-  SubnetIDsASG:
+  PrivateSubnetIds:
     Description: Existing public subnet IDs
-    Type: CommaDelimitedList
+    Type: String
   SecurityGroupID:
     Description: >-
       Security Group ID of an externally managed security group that gives
@@ -146,7 +146,7 @@ Resources:
       MinSize: '1'
       MetricsCollection:
         - Granularity: 1Minute
-      VPCZoneIdentifier: !Ref SubnetIDsASG
+      VPCZoneIdentifier: !Split [",", !Ref PrivateSubnetIds]
       Tags:
         - Key: Name
           Value: turbine-scheduler

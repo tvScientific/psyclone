@@ -2,3 +2,6 @@
 	path = submodules/quickstart-aws-vpc
 	url = https://github.com/aws-quickstart/quickstart-aws-vpc.git
 	branch = master
+[submodule "submodules/cf-templates-lib"]
+	path = submodules/cf-templates-lib
+	url = https://bitbucket.org/deductive/cf-templates-lib.git

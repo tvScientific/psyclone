@@ -7,6 +7,7 @@ PROFILE=${2:-""}
 REGION=${3:-"us-east-1"}
 PROJECT=${4:-"default"}
 ADDITIONAL_TEMPLATE_PATH=${5:-""}
+VPC_TEMPLATE_PATH=${5:-""}
 
 STAGE_LWR=$(echo "$STAGE" | tr '[:upper:]' '[:lower:]')
 PROJECT_LONG="${PROJECT}-psyclone"
@@ -77,7 +78,14 @@ aws s3 cp scripts/ s3://${DEPLOY_BUCKET}/${TURBINE_PREFIX}scripts --recursive ${
 echo "FINISHED UPLOADING SCRIPTS HERE"
 
 # upload vpc script
-aws s3 cp submodules/quickstart-aws-vpc/templates/aws-vpc.template s3://${DEPLOY_BUCKET}/${TURBINE_PREFIX}submodules/quickstart-aws-vpc/templates/aws-vpc.template ${PROFILE_OPT}
+if [[ -z "${VPC_TEMPLATE_PATH}" ]]; then
+    # No need to take any action - pre-made VPC template to use
+    pass
+else
+    VPC_TEMPLATE_PATH="./templates_updated/vpc_template.template"
+    python generate_vpc.py ${PROJECT_LONG} ${PROJECT} ${REGION} ${STACK_NAME} ${VPC_TEMPLATE_PATH}
+fi
+aws s3 cp ${VPC_TEMPLATE_PATH} s3://${DEPLOY_BUCKET}/${TURBINE_PREFIX}submodules/quickstart-aws-vpc/templates/aws-vpc.template ${PROFILE_OPT}
 
 # Create deploy bucket if it doesn't already exist
 aws s3 mb s3://${DEPLOY_BUCKET} ${PROFILE_OPT} ${REGION_OPT}

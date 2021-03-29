@@ -237,25 +237,8 @@ Resources:
     Properties:
       TemplateURL: !Join
         - ''
-        - - !Sub https://${QSS3BucketName}.s3.amazonaws.com/
-          - !Ref QSS3KeyPrefix
+        - - !Sub https://${QSS3BucketName}.s3.amazonaws.com/${QSS3KeyPrefix}
           - submodules/quickstart-aws-vpc/templates/aws-vpc.template
-      Parameters:
-        VPCCIDR: !Ref VPCCIDR
-        PublicSubnet1CIDR: !Ref PublicSubnet1CIDR
-        PublicSubnet2CIDR: !Ref PublicSubnet2CIDR
-        CreatePrivateSubnets: 'true'
-        PrivateSubnet1ACIDR: !Ref PrivateSubnet1ACIDR
-        PrivateSubnet2ACIDR: !Ref PrivateSubnet2ACIDR
-        NumberOfAZs: '2'
-        AvailabilityZones: !Join
-          - ','
-          - - Fn::Select:
-              - 0
-              - !GetAZs
-            - Fn::Select:
-              - 1
-              - !GetAZs
 
   TurbineCluster:
     Type: AWS::CloudFormation::Stack
@@ -267,10 +250,7 @@ Resources:
           - templates/turbine-cluster.template
       Parameters:
         VPCID: !GetAtt VPCStack.Outputs.VPCID
-        SubnetIDsASG: !Join
-          - ','
-          - - !GetAtt VPCStack.Outputs.PrivateSubnet1AID
-            - !GetAtt VPCStack.Outputs.PrivateSubnet2AID
+        PrivateSubnetIds: !GetAtt VPCStack.Outputs.PrivateSubnetIds
         SchedulerAsWorker: !Ref SchedulerAsWorker
         AllowHTTPAccessCIDR: !Ref AllowHTTPAccessCIDR
         WebServerPort: !Ref WebServerPort

@@ -17,7 +17,7 @@ Metadata:
           default: VPC network configuration
         Parameters:
           - VPCID
-          - SubnetIDsASG
+          - PrivateSubnetIds
           - AllowHTTPAccessCIDR
       - Label:
           default: Turbine Cluster configuration
@@ -43,7 +43,7 @@ Metadata:
     ParameterLabels:
       VPCID:
         default: VPC ID
-      SubnetIDsASG:
+      PrivateSubnetIds:
         default: SubnetIDs to use
       AllowHTTPAccessCIDR:
         default: Allowed HTTP access CIDR
@@ -76,7 +76,7 @@ Parameters:
   VPCID:
     Description: An existing VPC for the cluster.
     Type: AWS::EC2::VPC::Id
-  SubnetIDsASG:
+  PrivateSubnetIds:
     Description: Existing public subnet IDs
     Type: CommaDelimitedList
   AllowHTTPAccessCIDR:
@@ -195,7 +195,7 @@ Resources:
     Properties:
       DBSubnetGroupDescription: >
         Associates the Database Instances with the selected VPC Subnets.
-      SubnetIds: !Ref SubnetIDsASG
+      SubnetIds: !Ref PrivateSubnetIds
 
   DBInstance:
     Type: AWS::RDS::DBInstance
@@ -278,9 +278,9 @@ Resources:
           - !Ref QSS3KeyPrefix
           - templates/turbine-scheduler.template
       Parameters:
-        SubnetIDsASG: !Join
+        PrivateSubnetIds: !Join
           - ","
-          - !Ref SubnetIDsASG
+          - !Ref PrivateSubnetIds
         SecurityGroupID: !Ref InstancesSecurityGroup
         DatabaseSecret: !Ref Secret
         QueueName: !GetAtt TaskQueue.QueueName
@@ -304,9 +304,9 @@ Resources:
           - templates/turbine-webserver.template
       Parameters:
         VPCID: !Ref VPCID
-        SubnetIDsASG: !Join
+        PrivateSubnetIds: !Join
           - ","
-          - !Ref SubnetIDsASG
+          - !Ref PrivateSubnetIds
         SecurityGroupID: !Ref InstancesSecurityGroup
         AllowHTTPAccessCIDR: !Ref AllowHTTPAccessCIDR
         DatabaseSecret: !Ref Secret
@@ -332,9 +332,9 @@ Resources:
           - templates/turbine-workerset.template
       Parameters:
         VPCID: !Ref VPCID
-        SubnetIDsASG: !Join
+        PrivateSubnetIds: !Join
           - ","
-          - !Ref SubnetIDsASG
+          - !Ref PrivateSubnetIds
         SecurityGroupID: !Ref InstancesSecurityGroup
         DatabaseSecret: !Ref Secret
         QueueName: !GetAtt TaskQueue.QueueName

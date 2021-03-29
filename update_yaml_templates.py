@@ -51,7 +51,7 @@ class UpdateTemplates:
 
     # better names
     def __init__(self, templates_path, policies_base_path, updated_templates_path, stage_name, project_name,
-                 region=None, load_balancer=False, route_53=True):
+                 region=None, load_balancer=False, route_53=True, label=""):
         self.templates_path = templates_path
         self.policies_base_path = policies_base_path
         self.updated_templates_path = updated_templates_path
@@ -82,7 +82,7 @@ class UpdateTemplates:
             loadbalancer_class = LoadBalancerTemplate(
                 stage_name, region, self.DOMAIN, self.random_string, project_name, self.PRODLIKE_STACKS,
                 self.ALLOWED_STAGES, self.route_53)
-            loadbalancer_and_routing = loadbalancer_class.loadbalancer_and_routing()
+            loadbalancer_and_routing = loadbalancer_class.loadbalancer_and_routing(label=label)
             cfs_path = loadbalancer_class.write_to_file("loadbalancer-and-routing-stack",
                                                         loadbalancer_and_routing)
             self.add_template(
@@ -90,13 +90,7 @@ class UpdateTemplates:
                 {
                     Labels.vpc_id_for_sgs: {"Fn::GetAtt": ["VPCStack", "Outputs.VPCID"]},
                     Labels.vpc_s3_endpoint_id: {"Fn::GetAtt": ["VPCStack", "Outputs.S3VPCEndpoint"]},
-                    Labels.subnet_ids: Join(
-                        ",",
-                        [
-                            GetAtt('VPCStack', 'Outputs.PublicSubnet1ID'),
-                            GetAtt('VPCStack', 'Outputs.PublicSubnet2ID'),
-                        ]
-                    ).to_dict()
+                    Labels.subnet_ids: GetAtt('VPCStack', 'Outputs.PrivateSubnetIds').to_dict(),
                 },
             )
             self.update_webserver()
@@ -546,8 +540,7 @@ class UpdateTemplates:
             ),
             Parameters={
                 "VPCID": Ref("VPCID").to_dict(),
-                "PrivateSubnet1AID": Ref("PrivateSubnet1AID").to_dict(),
-                "PrivateSubnet2AID": Ref("PrivateSubnet2AID").to_dict(),
+                "PrivateSubnetIds": Join(",", Ref("PrivateSubnetIds").to_dict()).to_dict(),
                 "SecurityGroupID": Ref("InstancesSecurityGroup").to_dict(),
                 "DatabaseSecret": Ref("Secret").to_dict(),
                 "QueueName": GetAtt(queue_label, "QueueName").to_dict(),
@@ -606,7 +599,7 @@ class LoadBalancerTemplate:
         self.random_string = random_string
         self.route_53 = route_53
 
-    def loadbalancer_and_routing(self):
+    def loadbalancer_and_routing(self, label=""):
         t = Template("AWS CloudFormation template:"
                      " Contains the Application Load Balancer.")
 
@@ -659,7 +652,7 @@ class LoadBalancerTemplate:
         }
         elb_account_id = region_elb_account_dict[self._region]
         # define application load balancer here
-        load_balancer = "LoadBalancer"
+        load_balancer = "LoadBalancer" + label
         webserver_target_group = "WebserverTargetGroup"
         t.add_resource(elasticloadbalancingv2.TargetGroup(
             webserver_target_group,
@@ -679,7 +672,11 @@ class LoadBalancerTemplate:
         sg = ec2.SecurityGroup(
             "SgOpenAll",
             GroupDescription="A security group to hold IP addresses which allow access to CloudFront",
-            GroupName="{}SgOpenAll{}".format(self._project_name_alphanum, self.current_mapping_vals["CamelNoSepStage"]),
+            GroupName="{}SgOpenAll{}{}".format(
+                self._project_name_alphanum,
+                self.current_mapping_vals["CamelNoSepStage"],
+                label
+            ),
             SecurityGroupIngress=[
                 ec2.SecurityGroupRule(
                     IpProtocol="tcp", ToPort=80, FromPort=80,

@@ -474,7 +474,7 @@ class UpdateTemplates:
         child_stack['Parameters'].update({parameter: {"Type": ptype}})
         parent_stack_resource['Properties']['Parameters'].update({parameter: value})
 
-    def add_new_workerset(self, instance_type, min_count, max_count, label):
+    def add_new_workerset(self, instance_type, min_count, max_count, label, ami=""):
         """
         Method adds workerset and queue associated with it, also adds exports for queue names where needed
         :param instance_type: EC2 instance type to use
@@ -484,6 +484,7 @@ class UpdateTemplates:
         - the queue name will appear under DEDUCTIVE_CUSTOM as {LABEL}_QUEUE in the airflow config
         - must be unique
         - must contain only ascii letters
+        :param ami: AMI ID for the new worker type
         :return: None
         """
 
@@ -554,6 +555,7 @@ class UpdateTemplates:
                 "LoadDefaultCons": Ref("LoadDefaultCons").to_dict(),
                 "QSS3BucketName": Ref("QSS3BucketName").to_dict(),
                 "QSS3KeyPrefix": Ref("QSS3KeyPrefix").to_dict(),
+                "AMIID": ami,
             },
             DependsOn=["SecretTargetAttachment"]
         )

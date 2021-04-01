@@ -19,4 +19,15 @@ if __name__ == "__main__":
         vpc.add_prod_subnets()
     else:
         vpc.add_prod_subnets()
+
+    vpc.add_endpoint("S3")
+    vpc.add_output("VPCID", reference_id=vpc.vpc_id.title)
+    string_for_sn = ",".join(len(vpc.private_subnets) * ["${%s}"])
+    vpc.add_output(
+        "PrivateSubnetIds",
+        # Jank construction of string... this needs to be better and added to the BaseClass somehow
+        sub="${" + "},${".join([sn.logical_id for sn in vpc.private_subnets]) + "}",
+    )
+    vpc.add_output("VPCCidrBlock", reference_id=vpc.vpc_id.title, attribute_id="CidrBlock")
+    vpc.add_output("S3VPCEndpoint", reference_id=vpc.endpoints['S3'])
     vpc.save_template(name)

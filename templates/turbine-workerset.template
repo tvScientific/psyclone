@@ -29,6 +29,7 @@ Metadata:
           - MaxGroupSize
           - ShrinkThreshold
           - GrowthThreshold
+          - AMIID
       - Label:
           default: Apache Airflow configuration
         Parameters:
@@ -62,6 +63,8 @@ Metadata:
         default: Shrink threshold
       GrowthThreshold:
         default: Growth threshold
+      AMIID:
+        default: ID of AMI to use or this workerset
       LoadExampleDags:
         default: Load example DAGs
       LoadDefaultCons:
@@ -132,6 +135,11 @@ Parameters:
       instance.
     Default: 0.9
     Type: Number
+  AMIID:
+    Description: >-
+      AMI ID to use for worker instances
+    Default: ''
+    Type: String
 
   LoadExampleDags:
     Description: >-
@@ -178,6 +186,7 @@ Parameters:
 
 Conditions:
   UsingDefaultBucket: !Equals [!Ref QSS3BucketName, 'turbine-quickstart']
+  UsingDefaultAMI: !Equals [!Ref AMIID, '']
 
 Resources:
 
@@ -185,10 +194,13 @@ Resources:
     Type: AWS::AutoScaling::LaunchConfiguration
     Properties:
       IamInstanceProfile: !Ref IamInstanceProfile
-      ImageId: !FindInMap
-        - AWSAMIRegionMap
-        - !Ref AWS::Region
-        - AMZNLINUX2
+      ImageId: !If
+        - UsingDefaultAMI
+        - !FindInMap
+          - AWSAMIRegionMap
+          - !Ref AWS::Region
+          - AMZNLINUX2
+        - !Ref AMIID
       InstanceType: !Ref InstanceType
       SecurityGroups:
         - !Ref SecurityGroup

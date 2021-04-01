@@ -215,6 +215,7 @@ Resources:
           - !Ref Secret
           - ':SecretString:password}}'
       DBSubnetGroupName: !Ref DBSubnetGroup
+      MultiAZ: True
       VPCSecurityGroups:
         - !Ref SecurityGroup
 

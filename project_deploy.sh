@@ -83,7 +83,7 @@ if [[ -z "${VPC_TEMPLATE_PATH}" ]]; then
     pass
 else
     VPC_TEMPLATE_PATH="./templates_updated/vpc_template.template"
-    python generate_vpc.py ${PROJECT_LONG} ${PROJECT} ${REGION} ${STACK_NAME} ${VPC_TEMPLATE_PATH}
+    python generate_vpc.py ${PROJECT_LONG} ${PROJECT} ${REGION} ${STAGE} ${VPC_TEMPLATE_PATH} || exit
 fi
 aws s3 cp ${VPC_TEMPLATE_PATH} s3://${DEPLOY_BUCKET}/${TURBINE_PREFIX}submodules/quickstart-aws-vpc/templates/aws-vpc.template ${PROFILE_OPT}
 

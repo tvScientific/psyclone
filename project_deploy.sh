@@ -7,7 +7,7 @@ PROFILE=${2:-""}
 REGION=${3:-"us-east-1"}
 PROJECT=${4:-"default"}
 ADDITIONAL_TEMPLATE_PATH=${5:-""}
-VPC_TEMPLATE_PATH=${5:-""}
+VPC_TEMPLATE_PATH=${6:-""}
 
 STAGE_LWR=$(echo "$STAGE" | tr '[:upper:]' '[:lower:]')
 PROJECT_LONG="${PROJECT}-psyclone"

@@ -18,7 +18,7 @@ if __name__ == "__main__":
 
     VPCTemplate.set_class_variables(proj_long, proj_short, region, stage_name, template_output_dir=directory,)
     vpc = VPCTemplate("10.0.0.0/16")
-    if 'prod' in stage_name.lower() or 'dev' in stage_name.lower():
+    if 'prod' in stage_name.lower():
         vpc.add_prod_subnets()
     else:
         # Need 2 public subnets for the load balancer...

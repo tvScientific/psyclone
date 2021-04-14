@@ -7,7 +7,7 @@ PROFILE=${2:-""}
 REGION=${3:-"us-east-1"}
 PROJECT=${4:-"default"}
 ADDITIONAL_TEMPLATE_PATH=${5:-""}
-VPC_TEMPLATE_PATH=${5:-""}
+VPC_TEMPLATE_PATH=${6:-""}
 
 STAGE_LWR=$(echo "$STAGE" | tr '[:upper:]' '[:lower:]')
 PROJECT_LONG="${PROJECT}-psyclone"
@@ -83,7 +83,7 @@ if [[ -z "${VPC_TEMPLATE_PATH}" ]]; then
     pass
 else
     VPC_TEMPLATE_PATH="./templates_updated/vpc_template.template"
-    python generate_vpc.py ${PROJECT_LONG} ${PROJECT} ${REGION} ${STACK_NAME} ${VPC_TEMPLATE_PATH}
+    python generate_vpc.py ${PROJECT_LONG} ${PROJECT} ${REGION} ${STAGE} ${VPC_TEMPLATE_PATH} || exit
 fi
 aws s3 cp ${VPC_TEMPLATE_PATH} s3://${DEPLOY_BUCKET}/${TURBINE_PREFIX}submodules/quickstart-aws-vpc/templates/aws-vpc.template ${PROFILE_OPT}
 

@@ -90,7 +90,7 @@ class UpdateTemplates:
                 {
                     Labels.vpc_id_for_sgs: {"Fn::GetAtt": ["VPCStack", "Outputs.VPCID"]},
                     Labels.vpc_s3_endpoint_id: {"Fn::GetAtt": ["VPCStack", "Outputs.S3VPCEndpoint"]},
-                    Labels.subnet_ids: GetAtt('VPCStack', 'Outputs.PrivateSubnetIds').to_dict(),
+                    Labels.subnet_ids: GetAtt('VPCStack', 'Outputs.PublicSubnetIds').to_dict(),
                 },
             )
             self.update_webserver()
@@ -474,7 +474,7 @@ class UpdateTemplates:
         child_stack['Parameters'].update({parameter: {"Type": ptype}})
         parent_stack_resource['Properties']['Parameters'].update({parameter: value})
 
-    def add_new_workerset(self, instance_type, min_count, max_count, label):
+    def add_new_workerset(self, instance_type, min_count, max_count, label, ami=""):
         """
         Method adds workerset and queue associated with it, also adds exports for queue names where needed
         :param instance_type: EC2 instance type to use
@@ -484,6 +484,7 @@ class UpdateTemplates:
         - the queue name will appear under DEDUCTIVE_CUSTOM as {LABEL}_QUEUE in the airflow config
         - must be unique
         - must contain only ascii letters
+        :param ami: AMI ID for the new worker type
         :return: None
         """
 
@@ -522,7 +523,7 @@ class UpdateTemplates:
                 ["".join(
                     [
                         "sudo echo AIRFLOW__DEDUCTIVE_CUSTOM__", label.upper(), "_QUEUE=",
-                        queue_name, " >> /etc/sysconfig/airflow.env"
+                        queue_name, " >> /etc/sysconfig/airflow.env\n"
                     ]
                 )]
             )
@@ -554,6 +555,7 @@ class UpdateTemplates:
                 "LoadDefaultCons": Ref("LoadDefaultCons").to_dict(),
                 "QSS3BucketName": Ref("QSS3BucketName").to_dict(),
                 "QSS3KeyPrefix": Ref("QSS3KeyPrefix").to_dict(),
+                "AMIID": ami,
             },
             DependsOn=["SecretTargetAttachment"]
         )
@@ -624,31 +626,31 @@ class LoadBalancerTemplate:
 
         # This list is from https://docs.aws.amazon.com/elasticloadbalancing/latest/application/load-balancer-access-logs.html
         region_elb_account_dict = {
-            'us-east-1': 127311923021,  # 'US East (N. Virginia)'},
-            'us-east-2': 33677994240,  # 'US East (Ohio)'},
-            'us-west-1': 27434742980,  # 'US West (N. California)'},
-            'us-west-2': 797873946194,  # 'US West (Oregon)'},
-            'af-south-1': 98369216593,  # 'Africa (Cape Town)'},
-            'ca-central-1': 985666609251,  # 'Canada (Central)'},
-            'eu-central-1': 54676820928,  # 'Europe (Frankfurt)'},
-            'eu-west-1': 156460612806,  # 'Europe (Ireland)'},
-            'eu-west-2': 652711504416,  # 'Europe (London)'},
-            'eu-south-1': 635631232127,  # 'Europe (Milan)'},
-            'eu-west-3': 9996457667,  # 'Europe (Paris)'},
-            'eu-north-1': 897822967062,  # 'Europe (Stockholm)'},
-            'ap-east-1': 754344448648,  # 'Asia Pacific (Hong Kong)'},
-            'ap-northeast-1': 582318560864,  # 'Asia Pacific (Tokyo)'},
-            'ap-northeast-2': 600734575887,  # 'Asia Pacific (Seoul)'},
-            'ap-northeast-3': 383597477331,  # 'Asia Pacific (Osaka-Local)'},
-            'ap-southeast-1': 114774131450,  # 'Asia Pacific (Singapore)'},
-            'ap-southeast-2': 783225319266,  # 'Asia Pacific (Sydney)'},
-            'ap-south-1': 718504428378,  # 'Asia Pacific (Mumbai)'},
-            'me-south-1': 76674570225,  # 'Middle East (Bahrain)'},
-            'sa-east-1': 507241528517,  # 'South America (São Paulo)'},
-            'us-gov-west-1*': 48591011584,  # 'AWS GovCloud (US-West)'},
-            'us-gov-east-1*': 190560391635,  # 'AWS GovCloud (US-East)'},
-            'cn-north-1*': 638102146993,  # 'China (Beijing)'},
-            'cn-northwest-1*': 37604701340,  # 'China (Ningxia)'
+            'us-east-1': '127311923021',            # 'US East (N. Virginia)'
+            'us-east-2': '033677994240',            # 'US East (Ohio)'
+            'us-west-1': '027434742980',            # 'US West (N. California)'
+            'us-west-2': '797873946194',            # 'US West (Oregon)'
+            'af-south-1': '098369216593',           # 'Africa (Cape Town)'
+            'ca-central-1': '985666609251',         # 'Canada (Central)'
+            'eu-central-1': '054676820928',         # 'Europe (Frankfurt)'
+            'eu-west-1': '156460612806',            # 'Europe (Ireland)'
+            'eu-west-2': '652711504416',            # 'Europe (London)'
+            'eu-south-1': '635631232127',           # 'Europe (Milan)'
+            'eu-west-3': '009996457667',            # 'Europe (Paris)'
+            'eu-north-1': '897822967062',           # 'Europe (Stockholm)'
+            'ap-east-1': '754344448648',            # 'Asia Pacific (Hong Kong)'
+            'ap-northeast-1': '582318560864',       # 'Asia Pacific (Tokyo)'
+            'ap-northeast-2': '600734575887',       # 'Asia Pacific (Seoul)'
+            'ap-northeast-3': '383597477331',       # 'Asia Pacific (Osaka-Local)'
+            'ap-southeast-1': '114774131450',       # 'Asia Pacific (Singapore)'
+            'ap-southeast-2': '783225319266',       # 'Asia Pacific (Sydney)'
+            'ap-south-1': '718504428378',           # 'Asia Pacific (Mumbai)'
+            'me-south-1': '076674570225',           # 'Middle East (Bahrain)'
+            'sa-east-1': '507241528517',            # 'South America (São Paulo)'
+            'us-gov-west-1*': '048591011584',       # 'AWS GovCloud (US-West)'
+            'us-gov-east-1*': '190560391635',       # 'AWS GovCloud (US-East)'
+            'cn-north-1*': '638102146993',          # 'China (Beijing)'
+            'cn-northwest-1*': '037604701340',      # 'China (Ningxia)'
         }
         elb_account_id = region_elb_account_dict[self._region]
         # define application load balancer here

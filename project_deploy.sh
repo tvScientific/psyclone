@@ -78,10 +78,12 @@ aws s3 cp scripts/ s3://${DEPLOY_BUCKET}/${TURBINE_PREFIX}scripts --recursive ${
 echo "FINISHED UPLOADING SCRIPTS HERE"
 
 # upload vpc script
-if [[ -z "${VPC_TEMPLATE_PATH}" ]]; then
+if ! [[ -z "${VPC_TEMPLATE_PATH}" ]]; then
+  echo "not creating vpc template"
     # No need to take any action - pre-made VPC template to use
     pass
 else
+    echo "creating new vpc template"
     VPC_TEMPLATE_PATH="./templates_updated/vpc_template.template"
     python generate_vpc.py ${PROJECT_LONG} ${PROJECT} ${REGION} ${STAGE} ${VPC_TEMPLATE_PATH} || exit
 fi

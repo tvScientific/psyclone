@@ -30,8 +30,8 @@ yum install -y python3 python3-pip python3-wheel python3-devel
 wget https://files.pythonhosted.org/packages/cb/28/91f26bd088ce8e22169032100d4260614fc3da435025ff389ef1d396a433/pip-20.2.4-py2.py3-none-any.whl
 python3 -m pip install pip-20.2.4-py2.py3-none-any.whl
 
-#pip3 install --upgrade -r requirements_freeze.txt
-pip3 install marshmallow-sqlalchemy==0.25.0
+pip3 install --upgrade -r requirements_freeze.txt
+#pip3 install marshmallow-sqlalchemy==0.25.0
 pip3 install awscurl
 EC2_HOST_IDENTIFIER="arn:$AWS_PARTITION:ec2:$AWS_REGION:$AWS_ACCOUNT_ID"
 EC2_HOST_IDENTIFIER="$EC2_HOST_IDENTIFIER:instance/$EC2_INSTANCE_ID"
@@ -124,4 +124,4 @@ cd_agent() {
     ./install auto
 }
 
-pip freeze > /bin/pipfreeze.txt
+#pip freeze > /bin/pipfreeze.txt

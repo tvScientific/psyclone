@@ -37,10 +37,6 @@ echo "wget pip (fixed version 20.2.4) and install"
 wget https://files.pythonhosted.org/packages/cb/28/91f26bd088ce8e22169032100d4260614fc3da435025ff389ef1d396a433/pip-20.2.4-py2.py3-none-any.whl
 python3 -m pip install pip-20.2.4-py2.py3-none-any.whl
 
-echo "Adds symbolic links to pip to ready for setup"
-ln -s /usr/local/bin/pip /usr/bin/pip
-ln -s /usr/local/bin/pip3 /usr/bin/pip3
-source ~/.bashrc
 
 echo "Install awscurl and retrieve EC2_HOST_IDENTIFIER"
 pip3 install awscurl

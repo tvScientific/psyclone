@@ -37,7 +37,7 @@ echo "wget pip (fixed version 20.2.4) and install"
 wget https://files.pythonhosted.org/packages/cb/28/91f26bd088ce8e22169032100d4260614fc3da435025ff389ef1d396a433/pip-20.2.4-py2.py3-none-any.whl
 python3 -m pip install pip-20.2.4-py2.py3-none-any.whl
 
-
+pip3 install marshmallow-sqlalchemy==0.25.0
 echo "Install awscurl and retrieve EC2_HOST_IDENTIFIER"
 pip3 install awscurl
 EC2_HOST_IDENTIFIER="arn:$AWS_PARTITION:ec2:$AWS_REGION:$AWS_ACCOUNT_ID"

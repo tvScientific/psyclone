@@ -8,3 +8,4 @@ taskcat
 yq
 troposphere
 awacs
+MarkupSafe==2.0.1

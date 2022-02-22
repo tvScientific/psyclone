@@ -106,6 +106,7 @@ export PYCURL_SSL_LIBRARY=openssl
 pip3 install "apache-airflow[celery,postgres,s3,crypto,google_auth]==1.10.10" "celery[sqs]==4.4.7"
 pip3 install SQLAlchemy==1.3.23
 pip3 install WTForms==2.3.3
+pip3 install MarkupSafe==2.0.1
 mkdir "$AIRFLOW_HOME" && chown -R ec2-user: "$AIRFLOW_HOME"
 
 systemctl enable --now cfn-hup.service

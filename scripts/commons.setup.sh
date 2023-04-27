@@ -30,6 +30,10 @@ yum install -y python3 python3-pip python3-wheel python3-devel
 wget https://files.pythonhosted.org/packages/cb/28/91f26bd088ce8e22169032100d4260614fc3da435025ff389ef1d396a433/pip-20.2.4-py2.py3-none-any.whl
 python3 -m pip install pip-20.2.4-py2.py3-none-any.whl
 
+# We need to version-lock urllib3 since version 2 requires openssl 1.1.1,
+# and yum only has openssl 1.0.1
+pip3 install urllib3==1.26.15
+
 pip3 install marshmallow-sqlalchemy==0.25.0
 pip3 install awscurl
 EC2_HOST_IDENTIFIER="arn:$AWS_PARTITION:ec2:$AWS_REGION:$AWS_ACCOUNT_ID"

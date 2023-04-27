@@ -36,7 +36,7 @@ pip3 install urllib3==1.26.15
 
 # We need to version-lock importlib-metadata since celery conflicts with
 # later versions of it
-pip 3 install importlib-metadata==4.13.0
+pip3 install importlib-metadata==4.13.0
 
 # We need to version-lock wtforms since the >=3 has a breaking change
 pip3 install wtforms==2.3.3

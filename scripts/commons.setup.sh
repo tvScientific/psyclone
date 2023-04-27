@@ -34,6 +34,10 @@ python3 -m pip install pip-20.2.4-py2.py3-none-any.whl
 # and yum only has openssl 1.0.1
 pip3 install urllib3==1.26.15
 
+# We need to version-lock importlib-metadata since celery conflicts with
+# later versions of it
+pip 3 install importlib-metadata==4.13.0
+
 pip3 install marshmallow-sqlalchemy==0.25.0
 pip3 install awscurl
 EC2_HOST_IDENTIFIER="arn:$AWS_PARTITION:ec2:$AWS_REGION:$AWS_ACCOUNT_ID"

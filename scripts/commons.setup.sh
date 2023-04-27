@@ -38,6 +38,9 @@ pip3 install urllib3==1.26.15
 # later versions of it
 pip 3 install importlib-metadata==4.13.0
 
+# We need to version-lock wtforms since the >=3 has a breaking change
+pip3 install wtforms==2.3.3
+
 pip3 install marshmallow-sqlalchemy==0.25.0
 pip3 install awscurl
 EC2_HOST_IDENTIFIER="arn:$AWS_PARTITION:ec2:$AWS_REGION:$AWS_ACCOUNT_ID"

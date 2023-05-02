@@ -9,3 +9,4 @@ pytest
 taskcat
 yq
 troposphere
+importlib-metadata==4.13.0
